@@ -1,15 +1,30 @@
+# PrepWize AI
 
+AI-powered interview preparation platform for students and junior developers.
 
-This contains everything you need to run your app locally.
+## Features
 
+- Technical interview simulations
+- Behavioral interview practice
+- AI-generated feedback
+- Progress tracking
+- Achievement system
+- Personalized recommendations
+
+## Tech Stack
+
+- React
+- TypeScript
+- Express.js
+- Gemini AI
+- Docker
 
 ## Run Locally
 
-**Prerequisites:**  Node.js
+npm install
+npm run dev
 
+## Docker
 
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+docker build -t prepwize .
+docker run -p 3000:3000 prepwize
