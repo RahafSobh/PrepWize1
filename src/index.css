@@ -1,0 +1,102 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Outfit", "Space Grotesk", sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+}
+
+body {
+  font-family: var(--font-sans);
+  background-color: #fafdff; /* Vibrant elegant background touch */
+}
+
+/* Glow effects and animation frames */
+@keyframes orbitalPulse {
+  0%, 100% {
+    transform: scale(1) rotate(0deg);
+    filter: brightness(1);
+  }
+  50% {
+    transform: scale(1.05) rotate(180deg);
+    filter: brightness(1.15);
+  }
+}
+
+.glow-ambient {
+  box-shadow: 0 0 40px -10px rgba(16, 185, 129, 0.15);
+}
+
+.card-hover-fun {
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.card-hover-fun:hover {
+  transform: translateY(-4px) scale(1.01);
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.05), 0 10px 10px -5px rgba(0, 0, 0, 0.01);
+}
+
+/* Micro-sparkle effects definitions */
+@keyframes sparkleRot {
+  0% { transform: rotate(0deg) scale(0.9); opacity: 0.8; }
+  50% { transform: rotate(185deg) scale(1.2); opacity: 1; }
+  100% { transform: rotate(360deg) scale(0.9); opacity: 0.8; }
+}
+
+.animate-sparkle-gear {
+  animation: sparkleRot 4s ease-in-out infinite;
+}
+
+/* Beautiful dynamic linear pulse bar */
+@keyframes colorWave {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateY(1rem);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.animate-slide-up {
+  animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-text-rainbow {
+  background: linear-gradient(to right, #10b981, #f59e0b, #6366f1, #ec4899, #10b981);
+  background-size: 200% auto;
+  color: transparent;
+  -webkit-background-clip: text;
+  background-clip: text;
+  animation: colorWave 4s linear infinite;
+}
+
+.animate-bg-rainbow {
+  background: linear-gradient(135deg, #09090b 0%, #17171a 50%, #030712 100%);
+  background-size: 200% 200%;
+  animation: colorWave 8s ease infinite;
+}
+
+/* Compact layout style classes */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(161, 161, 170, 0.3);
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(113, 113, 122, 0.6);
+}

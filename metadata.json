@@ -1,0 +1,6 @@
+{
+  "name": "PrepWise AI",
+  "description": "AI-powered interactive interview simulation for developers. Practice algorithm coding, behavioral questions (STAR method evaluation), and system design with full automated feedback scores and a responsive compiler workspace.",
+  "requestFramePermissions": ["microphone"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
