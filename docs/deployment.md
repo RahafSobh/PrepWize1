@@ -202,6 +202,53 @@ Cloud platforms map their dynamic port via `-e PORT=...` internally — no chang
 
 ---
 
+## CI/CD (GitHub Actions)
+
+Three workflows — same codebase for local, staging, and production. **No secrets in YAML files.**
+
+### Workflows
+
+| Workflow | Trigger | Purpose |
+|----------|---------|---------|
+| `ci.yml` | PR + push to `main` | `npm ci` → lint → build → Playwright E2E → Docker build verify |
+| `deploy-staging.yml` | After CI succeeds on `main` | POST Render deploy hook → staging |
+| `deploy-production.yml` | Manual (`workflow_dispatch`) | Requires CI pass + type `deploy` → production |
+
+**Local dev is unchanged:** `npm run dev` + `.env.local`. Docker Compose remains optional for local production smoke tests.
+
+### GitHub Environments
+
+Create in **Settings → Environments**:
+
+| Environment | Purpose | Suggested protection |
+|-------------|---------|----------------------|
+| `staging` | Auto deploy after CI | None |
+| `production` | Manual release | Required reviewers |
+
+### GitHub Secrets (deploy hooks only)
+
+| Secret | Environment | Source |
+|--------|-------------|--------|
+| `RENDER_DEPLOY_HOOK_STAGING` | staging | Render → Service → Deploy Hook |
+| `RENDER_DEPLOY_HOOK_PRODUCTION` | production | Render → Service → Deploy Hook |
+
+Runtime secrets (`GEMINI_API_KEY`, `GOOGLE_CLIENT_ID`, `SESSION_SECRET`) stay in **Render/Railway dashboard**, not GitHub.
+
+### CI notes
+
+- Node **22** (matches Dockerfile)
+- E2E runs with empty `GEMINI_API_KEY` — server fallbacks, no API cost
+- Failed E2E uploads `playwright-report` artifact
+- Staging deploy **skips gracefully** if deploy hook secret is not configured yet
+
+### Production release
+
+1. Merge to `main` → CI runs → staging deploys (when hook configured)
+2. Verify staging URL
+3. **Actions → Deploy Production → Run workflow** → confirm with `deploy`
+
+---
+
 ## Environment Variables
 
 ### Required for Full AI Features

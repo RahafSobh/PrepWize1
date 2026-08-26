@@ -1,0 +1,65 @@
+name: Deploy Production
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: "Type deploy to confirm production release"
+        required: true
+        type: string
+
+permissions:
+  actions: read
+  contents: read
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+jobs:
+  verify-ci:
+    name: Verify CI on selected commit
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Ensure CI succeeded on this commit
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          SHA="${{ github.sha }}"
+          echo "Checking CI status for commit ${SHA}"
+          CONCLUSION=$(gh api "repos/${{ github.repository }}/actions/workflows/ci.yml/runs" \
+            --jq ".workflow_runs[] | select(.head_sha==\"${SHA}\") | .conclusion" | head -n1)
+          if [ "$CONCLUSION" != "success" ]; then
+            echo "CI must pass on commit ${SHA} before production deploy (latest CI: ${CONCLUSION:-none})."
+            exit 1
+          fi
+          echo "CI passed."
+
+  deploy:
+    name: Deploy to production
+    runs-on: ubuntu-latest
+    needs: verify-ci
+    environment: production
+    timeout-minutes: 15
+
+    steps:
+      - name: Confirm production deploy
+        run: |
+          if [ "${{ github.event.inputs.confirm }}" != "deploy" ]; then
+            echo 'Confirmation failed. Re-run and type deploy in the confirm field.'
+            exit 1
+          fi
+
+      - name: Trigger Render production deploy
+        env:
+          DEPLOY_HOOK: ${{ secrets.RENDER_DEPLOY_HOOK_PRODUCTION }}
+        run: |
+          if [ -z "$DEPLOY_HOOK" ]; then
+            echo "RENDER_DEPLOY_HOOK_PRODUCTION is not configured."
+            echo "Add the Render deploy hook URL to GitHub → Settings → Environments → production."
+            exit 1
+          fi
+          curl --fail --silent --show-error --request POST "$DEPLOY_HOOK"
+          echo "Production deploy triggered successfully."

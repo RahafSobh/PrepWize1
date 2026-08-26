@@ -135,7 +135,13 @@ GEMINI_API_KEY=your_key docker compose up --build
 
 ### Tests
 
-**אין test suite.** `npm run lint` הוא ה-validation היחיד הקיים. אל תוסיף tests אלא אם התבקש.
+```bash
+npm run lint          # tsc --noEmit
+npm run test:e2e      # Playwright (full suite)
+npm run test:e2e:smoke # smoke subset
+```
+
+CI runs lint, build, E2E, and Docker build verify on every PR and push to `main` (see `.github/workflows/`).
 
 ---
 
