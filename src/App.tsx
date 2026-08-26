@@ -4,6 +4,7 @@
  */
 
 import { useState, useEffect } from 'react';
+import { GoogleOAuthProvider } from '@react-oauth/google';
 import { User, Sparkles, BookOpen, Clock, Layers, HelpCircle, Star, Github, RefreshCw, LogOut, Flame } from 'lucide-react';
 import { InterviewSession, UserProfile, InterviewPreferences } from './types';
 import Dashboard from './components/Dashboard';
@@ -92,9 +93,9 @@ const generatePrepopulatedHistory = (): InterviewSession[] => {
 
 export default function App() {
   const [currentView, setCurrentView] = useState<'dashboard' | 'setup' | 'simulator' | 'feedback' | 'pricing'>('dashboard');
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
-    return localStorage.getItem('prepwise_authenticated') === 'true';
-  });
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
+  const [authReady, setAuthReady] = useState(false);
+  const [googleClientId, setGoogleClientId] = useState<string | null>(null);
   
   // App contexts states
   const [profile, setProfile] = useState<UserProfile>(() => {
@@ -134,6 +135,54 @@ export default function App() {
   const [selectedPreferences, setSelectedPreferences] = useState<InterviewPreferences | null>(null);
   const [selectedSessionForReport, setSelectedSessionForReport] = useState<InterviewSession | null>(null);
   const [isOnboardingOpen, setIsOnboardingOpen] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function bootstrapAuth() {
+      try {
+        const [configRes, meRes] = await Promise.all([
+          fetch('/api/config'),
+          fetch('/api/auth/me', { credentials: 'include' }),
+        ]);
+
+        if (cancelled) return;
+
+        if (configRes.ok) {
+          const config = await configRes.json();
+          setGoogleClientId(config.googleClientId || null);
+        }
+
+        if (meRes.ok) {
+          const serverProfile = await meRes.json();
+          setProfile((prev) => ({
+            ...prev,
+            ...serverProfile,
+            plan: prev.email === serverProfile.email ? prev.plan : serverProfile.plan,
+            simulationsCompleted:
+              prev.email === serverProfile.email ? prev.simulationsCompleted : serverProfile.simulationsCompleted,
+            role: prev.email === serverProfile.email ? prev.role : serverProfile.role,
+            streakCount: prev.email === serverProfile.email ? prev.streakCount : serverProfile.streakCount,
+          }));
+          setIsAuthenticated(true);
+          localStorage.setItem('prepwise_authenticated', 'true');
+        } else if (localStorage.getItem('prepwise_authenticated') === 'true') {
+          setIsAuthenticated(true);
+        }
+      } catch {
+        if (localStorage.getItem('prepwise_authenticated') === 'true') {
+          setIsAuthenticated(true);
+        }
+      } finally {
+        if (!cancelled) setAuthReady(true);
+      }
+    }
+
+    bootstrapAuth();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   // Auto-open onboarding guide for authenticated first-time visitors
   useEffect(() => {
@@ -197,23 +246,52 @@ export default function App() {
   };
 
   const handleAuthSuccess = (newProfile: UserProfile) => {
-    setProfile(newProfile);
+    setProfile((prev) => ({
+      ...prev,
+      ...newProfile,
+      plan: prev.email === newProfile.email ? prev.plan : newProfile.plan,
+      simulationsCompleted:
+        prev.email === newProfile.email ? prev.simulationsCompleted : newProfile.simulationsCompleted,
+      role: prev.email === newProfile.email ? prev.role : newProfile.role,
+      streakCount: prev.email === newProfile.email ? prev.streakCount : newProfile.streakCount,
+    }));
     setIsAuthenticated(true);
     localStorage.setItem('prepwise_authenticated', 'true');
     setCurrentView('dashboard');
   };
 
-  const handleSignOut = () => {
+  const handleSignOut = async () => {
+    try {
+      await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
+    } catch {
+      // ignore network errors — still clear local session
+    }
     setIsAuthenticated(false);
     localStorage.removeItem('prepwise_authenticated');
   };
 
-  if (!isAuthenticated) {
+  if (!authReady) {
     return (
+      <div id="prepwise-app-root" className="min-h-screen bg-zinc-50 flex items-center justify-center text-sm text-zinc-500">
+        Loading PrepWise...
+      </div>
+    );
+  }
+
+  const authScreen = (
+    <AuthScreen
+      onAuthSuccess={handleAuthSuccess}
+      mockProfile={profile}
+      googleClientId={googleClientId}
+    />
+  );
+
+  if (!isAuthenticated) {
+    const unauthenticatedApp = (
       <div id="prepwise-app-root" className="min-h-screen bg-zinc-50 text-zinc-900 font-sans flex flex-col justify-between">
         <StagingBanner />
         <main className="flex-1 max-w-7xl w-full mx-auto p-4 md:p-6 lg:p-8 flex items-center justify-center">
-          <AuthScreen onAuthSuccess={handleAuthSuccess} mockProfile={profile} />
+          {authScreen}
         </main>
         <footer className="border-t border-zinc-200 bg-white py-4 px-6 text-center text-[10px] text-zinc-400 select-none">
           <div className="max-w-7xl mx-auto flex flex-col sm:flex-row justify-between items-center gap-2">
@@ -225,6 +303,12 @@ export default function App() {
           </div>
         </footer>
       </div>
+    );
+
+    return googleClientId ? (
+      <GoogleOAuthProvider clientId={googleClientId}>{unauthenticatedApp}</GoogleOAuthProvider>
+    ) : (
+      unauthenticatedApp
     );
   }
 
@@ -294,8 +378,10 @@ export default function App() {
                 <p className="font-semibold text-zinc-805 text-[11px] font-sans">User: {profile.name}</p>
                 <p className="text-[10px] text-emerald-600 font-mono font-bold uppercase">{profile.plan} Plan</p>
               </div>
-              <div className="w-8 h-8 rounded-full bg-zinc-150 border border-zinc-250 flex items-center justify-center relative shadow-xs">
-                {profile.avatarUrl ? (
+              <div className="w-8 h-8 rounded-full bg-zinc-150 border border-zinc-250 flex items-center justify-center relative shadow-xs overflow-hidden">
+                {profile.avatarUrl?.startsWith('http') ? (
+                  <img src={profile.avatarUrl} alt="" className="w-full h-full object-cover" />
+                ) : profile.avatarUrl ? (
                   <span className="text-sm">{profile.avatarUrl}</span>
                 ) : (
                   <User className="w-4 h-4 text-zinc-650" />

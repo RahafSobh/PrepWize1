@@ -5,6 +5,9 @@
 
 import express from "express";
 import path from "path";
+import cookieParser from "cookie-parser";
+import { OAuth2Client } from "google-auth-library";
+import * as jose from "jose";
 
 import dotenv from "dotenv";
 import { GoogleGenAI, Type } from "@google/genai";
@@ -42,12 +45,115 @@ function resolveAppUrl(): string {
 const APP_ENV = resolveAppEnvironment();
 const APP_URL = resolveAppUrl();
 const ALLOWED_ORIGINS = parseAllowedOrigins();
+const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID?.trim() || "";
+const SESSION_SECRET = process.env.SESSION_SECRET?.trim() || "";
+const SESSION_COOKIE = "prepwize_session";
+const SESSION_MAX_AGE_SECONDS = 7 * 24 * 60 * 60;
+
+interface SessionClaims {
+  sub: string;
+  email: string;
+  name: string;
+  picture?: string;
+}
+
+interface AuthUserProfile {
+  name: string;
+  email: string;
+  avatarUrl: string;
+  plan: "Free" | "Starter" | "Pro" | "Career+";
+  simulationsCompleted: number;
+  role: "Frontend" | "Backend" | "Full Stack" | "Mobile" | "DevOps" | "System Architect";
+  streakCount: number;
+}
+
+let googleOAuthClient: OAuth2Client | null = null;
+
+function isGoogleAuthConfigured(): boolean {
+  return Boolean(GOOGLE_CLIENT_ID && SESSION_SECRET);
+}
+
+function getGoogleOAuthClient(): OAuth2Client {
+  if (!GOOGLE_CLIENT_ID) {
+    throw new Error("GOOGLE_CLIENT_ID is not configured");
+  }
+  if (!googleOAuthClient) {
+    googleOAuthClient = new OAuth2Client(GOOGLE_CLIENT_ID);
+  }
+  return googleOAuthClient;
+}
+
+async function signSessionToken(payload: SessionClaims): Promise<string> {
+  if (!SESSION_SECRET) {
+    throw new Error("SESSION_SECRET is not configured");
+  }
+  const secretKey = new TextEncoder().encode(SESSION_SECRET);
+  return new jose.SignJWT({ ...payload })
+    .setProtectedHeader({ alg: "HS256" })
+    .setIssuedAt()
+    .setExpirationTime(`${SESSION_MAX_AGE_SECONDS}s`)
+    .sign(secretKey);
+}
+
+async function verifySessionToken(token: string): Promise<SessionClaims | null> {
+  if (!SESSION_SECRET) return null;
+  try {
+    const secretKey = new TextEncoder().encode(SESSION_SECRET);
+    const { payload } = await jose.jwtVerify(token, secretKey, {
+      algorithms: ["HS256"],
+    });
+    if (
+      typeof payload.sub !== "string" ||
+      typeof payload.email !== "string" ||
+      typeof payload.name !== "string"
+    ) {
+      return null;
+    }
+    return {
+      sub: payload.sub,
+      email: payload.email,
+      name: payload.name,
+      picture: typeof payload.picture === "string" ? payload.picture : undefined,
+    };
+  } catch {
+    return null;
+  }
+}
+
+function buildAuthProfile(claims: SessionClaims): AuthUserProfile {
+  return {
+    name: claims.name,
+    email: claims.email,
+    avatarUrl: claims.picture || "🚀",
+    plan: "Free",
+    simulationsCompleted: 0,
+    role: "Full Stack",
+    streakCount: 1,
+  };
+}
+
+function setSessionCookie(res: express.Response, token: string) {
+  res.cookie(SESSION_COOKIE, token, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+    maxAge: SESSION_MAX_AGE_SECONDS * 1000,
+    path: "/",
+  });
+}
+
+async function readSessionFromRequest(req: express.Request): Promise<SessionClaims | null> {
+  const token = req.cookies?.[SESSION_COOKIE];
+  if (!token || typeof token !== "string") return null;
+  return verifySessionToken(token);
+}
 
 
 const app = express();
 const PORT = Number(process.env.PORT) || 3000;
 
 app.use(express.json());
+app.use(cookieParser());
 
 // CORS — only applies when ALLOWED_ORIGINS is configured (same codebase, per-environment config).
 app.use((req, res, next) => {
@@ -55,6 +161,7 @@ app.use((req, res, next) => {
 
   if (requestOrigin && ALLOWED_ORIGINS.includes(requestOrigin)) {
     res.setHeader("Access-Control-Allow-Origin", requestOrigin);
+    res.setHeader("Access-Control-Allow-Credentials", "true");
     res.setHeader("Access-Control-Allow-Methods", "GET,POST,OPTIONS");
     res.setHeader("Access-Control-Allow-Headers", "Content-Type");
     res.setHeader("Vary", "Origin");
@@ -361,7 +468,64 @@ app.get("/api/config", (req, res) => {
     environment: APP_ENV,
     appUrl: APP_URL || null,
     isStaging: APP_ENV === "staging",
+    googleAuthEnabled: isGoogleAuthConfigured(),
+    googleClientId: GOOGLE_CLIENT_ID || null,
   });
+});
+
+// Google Sign-In — verify GIS ID token and issue httpOnly session cookie
+app.post("/api/auth/google", async (req: express.Request, res: express.Response) => {
+  try {
+    if (!isGoogleAuthConfigured()) {
+      return res.status(503).json({ error: "Google Sign-In is not configured on this server" });
+    }
+
+    const credential = typeof req.body?.credential === "string" ? req.body.credential : "";
+    if (!credential) {
+      return res.status(400).json({ error: "Missing Google credential" });
+    }
+
+    const ticket = await getGoogleOAuthClient().verifyIdToken({
+      idToken: credential,
+      audience: GOOGLE_CLIENT_ID,
+    });
+    const payload = ticket.getPayload();
+    if (!payload?.sub || !payload.email) {
+      return res.status(401).json({ error: "Invalid Google account payload" });
+    }
+
+    const claims: SessionClaims = {
+      sub: payload.sub,
+      email: payload.email,
+      name: payload.name || payload.email.split("@")[0],
+      picture: payload.picture,
+    };
+
+    const sessionToken = await signSessionToken(claims);
+    setSessionCookie(res, sessionToken);
+    res.json(buildAuthProfile(claims));
+  } catch (err: any) {
+    console.error("Google auth failed:", err);
+    res.status(401).json({ error: "Google authentication failed" });
+  }
+});
+
+app.get("/api/auth/me", async (req: express.Request, res: express.Response) => {
+  const session = await readSessionFromRequest(req);
+  if (!session) {
+    return res.status(401).json({ error: "Not authenticated" });
+  }
+  res.json(buildAuthProfile(session));
+});
+
+app.post("/api/auth/logout", (req: express.Request, res: express.Response) => {
+  res.clearCookie(SESSION_COOKIE, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+    path: "/",
+  });
+  res.json({ success: true });
 });
 
 // Endpoint: Start Interview session and generate the initial question/challenge

@@ -57,9 +57,36 @@ Public runtime config for the SPA (no secrets). Used for staging banner and clie
 {
   "environment": "staging",
   "appUrl": "https://prepwize-staging.onrender.com",
-  "isStaging": true
+  "isStaging": true,
+  "googleAuthEnabled": true,
+  "googleClientId": "1234567890-abc.apps.googleusercontent.com"
 }
 ```
+
+---
+
+### POST `/api/auth/google`
+
+Verify Google Identity Services ID token and issue an httpOnly session cookie.
+
+**Request body:**
+```json
+{ "credential": "<google-id-token>" }
+```
+
+**Response:** `UserProfile` JSON + `Set-Cookie: prepwize_session=...`
+
+---
+
+### GET `/api/auth/me`
+
+Returns the authenticated user profile from the session cookie, or `401`.
+
+---
+
+### POST `/api/auth/logout`
+
+Clears the session cookie.
 
 ---
 

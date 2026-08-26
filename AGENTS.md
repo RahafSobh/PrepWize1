@@ -171,6 +171,8 @@ GEMINI_API_KEY=your_key docker compose up --build
 |--------|-------|-------|
 | `APP_ENV` | server | `development` / `staging` / `production` — סביבה לוגית |
 | `GEMINI_API_KEY` | server | מפתח Google Gemini (חובה ל-AI אמיתי) |
+| `GOOGLE_CLIENT_ID` | server + `/api/config` | Google Sign-In OAuth client ID (public) |
+| `SESSION_SECRET` | server | חתימת httpOnly session cookie — **לעולם לא ב-client** |
 | `APP_URL` | server | URL ציבורי (logging, CORS) |
 | `ALLOWED_ORIGINS` | server | CORS — רשימת origins מופרדת בפסיקים |
 | `PORT` | server | פורט HTTP (ברירת מחדל: 3000) |

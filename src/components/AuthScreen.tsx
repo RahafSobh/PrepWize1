@@ -7,10 +7,12 @@ import React, { useState } from 'react';
 import { Sparkles, Shield, User, Mail, Lock, CheckCircle, ArrowRight, Github, Award, Terminal } from 'lucide-react';
 import { UserProfile } from '../types';
 import Logo from './Logo';
+import GoogleSignInButton from './GoogleSignInButton';
 
 interface AuthScreenProps {
   onAuthSuccess: (profile: UserProfile) => void;
   mockProfile: UserProfile;
+  googleClientId?: string | null;
 }
 
 const AVATAR_PRESETS = [
@@ -21,7 +23,7 @@ const AVATAR_PRESETS = [
   { emoji: '💼', label: 'Product Lead Tech', desc: 'Balances high technical craftsmanship with clean stakeholder delivery.' },
 ];
 
-export default function AuthScreen({ onAuthSuccess, mockProfile }: AuthScreenProps) {
+export default function AuthScreen({ onAuthSuccess, mockProfile, googleClientId }: AuthScreenProps) {
   const [tab, setTab] = useState<'login' | 'signup'>('signup');
   const [name, setName] = useState(mockProfile.name || 'Maya');
   const [email, setEmail] = useState(mockProfile.email || 'rahafsobh12@gmail.com');
@@ -338,12 +340,13 @@ export default function AuthScreen({ onAuthSuccess, mockProfile }: AuthScreenPro
               </button>
             </form>
 
-            {/* Interactive SSO OAuth shortcuts */}
+            {/* SSO shortcuts */}
             <div className="mt-6 flex flex-col sm:flex-row items-center gap-2.5">
               <span className="text-[10px] font-mono font-bold text-zinc-400 uppercase shrink-0">Or Quick Launch With:</span>
-              <div className="flex gap-2 w-full">
+              <div className="flex gap-2 w-full items-center">
                 <button
                   type="button"
+                  id="demo-github-auth-btn"
                   onClick={() => {
                     setIsLoading(true);
                     setTimeout(() => {
@@ -352,9 +355,9 @@ export default function AuthScreen({ onAuthSuccess, mockProfile }: AuthScreenPro
                         name: 'Maya',
                         email: 'rahafsobh12@gmail.com',
                         avatarUrl: '🚀',
-                        plan: 'Free',
-                        simulationsCompleted: 2,
-                        role: 'Full Stack',
+                        plan: mockProfile.plan || 'Free',
+                        simulationsCompleted: mockProfile.simulationsCompleted || 0,
+                        role: mockProfile.role || 'Full Stack',
                         streakCount: mockProfile.streakCount || 3
                       });
                     }, 800);
@@ -364,28 +367,23 @@ export default function AuthScreen({ onAuthSuccess, mockProfile }: AuthScreenPro
                   <Github className="w-3.5 h-3.5" />
                   GitHub OAuth
                 </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setIsLoading(true);
-                    setTimeout(() => {
-                      setIsLoading(false);
-                      onAuthSuccess({
-                        name: 'Maya',
-                        email: 'rahafsobh12@gmail.com',
-                        avatarUrl: '🧠',
-                        plan: 'Free',
-                        simulationsCompleted: 2,
-                        role: 'Full Stack',
-                        streakCount: mockProfile.streakCount || 3
-                      });
-                    }, 800);
-                  }}
-                  className="flex-1 bg-white border border-zinc-200 py-1.5 px-3 rounded-lg flex items-center justify-center gap-1.5 text-[11px] font-semibold text-zinc-700 hover:bg-zinc-50 transition cursor-pointer active:scale-95"
-                >
-                  <span className="text-emerald-500 font-bold">G</span>
-                  Google SSO
-                </button>
+                {googleClientId ? (
+                  <GoogleSignInButton
+                    onAuthSuccess={onAuthSuccess}
+                    onError={setErrorMessage}
+                    mockProfile={mockProfile}
+                  />
+                ) : (
+                  <button
+                    type="button"
+                    disabled
+                    title="Set GOOGLE_CLIENT_ID and SESSION_SECRET to enable Google Sign-In"
+                    className="flex-1 bg-zinc-50 border border-zinc-200 py-1.5 px-3 rounded-lg flex items-center justify-center gap-1.5 text-[11px] font-semibold text-zinc-400 cursor-not-allowed"
+                  >
+                    <span className="text-emerald-500 font-bold">G</span>
+                    Google Sign-In
+                  </button>
+                )}
               </div>
             </div>
 
