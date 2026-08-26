@@ -6,11 +6,15 @@
 
 ## Environments
 
-| Environment | Command | NODE_ENV | Frontend |
-|-------------|---------|----------|----------|
-| Development | `npm run dev` | unset / development | Vite HMR via Express middleware |
-| Production | `npm run build && npm start` | production | Static files from `dist/` |
-| Docker | `docker build && docker run` | production (set in Dockerfile) | Static files from `dist/` |
+One codebase, configuration via environment variables only. No duplicated code between environments.
+
+| Environment | `APP_ENV` | `NODE_ENV` | How it runs | Frontend |
+|-------------|-----------|------------|-------------|----------|
+| **Local development** | `development` | unset / `development` | `npm run dev` | Vite HMR via Express |
+| **Staging (cloud)** | `staging` | `production` | Docker on Render/Railway | Static `dist/` |
+| **Production (cloud)** | `production` | `production` | Docker on Render/Railway | Static `dist/` |
+
+Copy `.env.example` → `.env.local` for local development. Cloud secrets are set in the platform dashboard.
 
 ---
 
@@ -26,8 +30,7 @@
 ```bash
 cd PrepWize          # repo root
 npm install
-cp .env.example .env.local   # if .env.example exists; otherwise create .env.local
-# Add: GEMINI_API_KEY=your_key_here
+cp .env.example .env.local   # then add your GEMINI_API_KEY
 npm run dev
 ```
 
@@ -139,31 +142,50 @@ Excludes `node_modules`, secrets, `PrepWize1/`, `e2e/`, docs, and other files no
 
 PrepWize is a **single Docker container** — no database, no extra services. Both platforms detect the root `Dockerfile` automatically.
 
-### Required environment variables
+Deploy **two Web Services** from the same repo for staging and production (same Docker image, different env vars).
 
-Set these in the platform dashboard (**never** in the repo or Dockerfile):
+### Environment variables by deploy target
 
-| Variable | Required | Notes |
-|----------|----------|-------|
-| `GEMINI_API_KEY` | Yes (for real AI) | From Google AI Studio / Gemini API |
-| `NODE_ENV` | Recommended | Set to `production` |
-| `PORT` | Auto | Render and Railway inject this; `server.ts` reads `process.env.PORT` |
+Set in the platform dashboard (**never** in Git or the Dockerfile):
+
+| Variable | Local dev | Staging | Production |
+|----------|-----------|---------|------------|
+| `APP_ENV` | `development` | `staging` | `production` |
+| `NODE_ENV` | `development` | `production` | `production` |
+| `GEMINI_API_KEY` | your key | staging key (recommended) | production key |
+| `APP_URL` | `http://localhost:3000` | `https://your-staging-url` | `https://your-prod-url` |
+| `ALLOWED_ORIGINS` | empty (same-origin) | staging URL | production URL |
+| `PORT` | `3000` | auto (platform) | auto (platform) |
 
 Without `GEMINI_API_KEY`, the app still runs using built-in server fallbacks.
 
+### Staging vs production workflow
+
+1. **Staging service** — auto-deploy from `main`; `APP_ENV=staging`; test full flows and Gemini integration.
+2. **Production service** — manual promote or separate branch; `APP_ENV=production`.
+3. The SPA shows an amber **Staging** banner when `APP_ENV=staging` (via `GET /api/config`).
+
 ### Render
 
-1. **New → Web Service** → connect your GitHub repo
-2. **Environment:** Docker (uses root `Dockerfile`)
-3. **Environment variables:** add `GEMINI_API_KEY`, `NODE_ENV=production`
-4. Deploy — Render sets `PORT` automatically; health check path: `/api/health`
+**Staging**
+1. New Web Service → connect repo → Environment: Docker
+2. Name e.g. `prepwize-staging`
+3. Env: `APP_ENV=staging`, `NODE_ENV=production`, `GEMINI_API_KEY`, `APP_URL`, `ALLOWED_ORIGINS`
+4. Health check path: `/api/health`
+
+**Production**
+1. Duplicate service or create `prepwize-production`
+2. Env: `APP_ENV=production`, same pattern with production URLs/keys
+3. Disable auto-deploy or use manual promote from staging
 
 ### Railway
 
-1. **New Project → Deploy from GitHub**
-2. Railway detects `Dockerfile` and builds automatically
-3. **Variables:** add `GEMINI_API_KEY`, `NODE_ENV=production`
-4. Railway assigns a public URL and sets `PORT`
+**Staging project/service**
+1. Deploy from GitHub → Dockerfile detected
+2. Variables: `APP_ENV=staging`, `NODE_ENV=production`, `GEMINI_API_KEY`, `APP_URL`, `ALLOWED_ORIGINS`
+
+**Production project/service**
+1. Separate service or environment with `APP_ENV=production` and production secrets
 
 ### Local production container (same as cloud)
 
@@ -171,6 +193,7 @@ Without `GEMINI_API_KEY`, the app still runs using built-in server fallbacks.
 docker build -t prepwize .
 docker run -p 3000:3000 \
   -e NODE_ENV=production \
+  -e APP_ENV=production \
   -e GEMINI_API_KEY=your_key \
   prepwize
 ```
@@ -195,6 +218,9 @@ Without this key:
 
 | Variable | Default | Purpose |
 |----------|---------|---------|
+| `APP_ENV` | `development` / inferred | Logical environment: `development`, `staging`, `production` |
+| `APP_URL` | empty | Public URL for logging and future link generation |
+| `ALLOWED_ORIGINS` | empty | Comma-separated CORS origins (monolith is usually same-origin) |
 | `PORT` | `3000` | HTTP listen port |
 | `NODE_ENV` | unset (dev) | Controls Vite vs static serving |
 | `DISABLE_HMR` | unset | `true` → disable HMR (AI Studio agent edits) |

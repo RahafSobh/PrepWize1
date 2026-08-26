@@ -14,6 +14,7 @@ import PricingScreen from './components/PricingScreen';
 import Logo from './components/Logo';
 import AuthScreen from './components/AuthScreen';
 import OnboardingGuide from './components/OnboardingGuide';
+import StagingBanner from './components/StagingBanner';
 
 // Helper to provide realistic completed starting session data so the charts load beautiful immediately
 const generatePrepopulatedHistory = (): InterviewSession[] => {
@@ -210,6 +211,7 @@ export default function App() {
   if (!isAuthenticated) {
     return (
       <div id="prepwise-app-root" className="min-h-screen bg-zinc-50 text-zinc-900 font-sans flex flex-col justify-between">
+        <StagingBanner />
         <main className="flex-1 max-w-7xl w-full mx-auto p-4 md:p-6 lg:p-8 flex items-center justify-center">
           <AuthScreen onAuthSuccess={handleAuthSuccess} mockProfile={profile} />
         </main>
@@ -228,7 +230,8 @@ export default function App() {
 
   return (
     <div id="prepwise-app-root" className="min-h-screen bg-zinc-50 text-zinc-900 font-sans flex flex-col">
-      
+      <StagingBanner />
+
       {/* Visual Navigation Header bar */}
       <header className="bg-white border-b border-zinc-200 py-3.5 px-6 sticky top-0 z-40 shadow-xs">
         <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">

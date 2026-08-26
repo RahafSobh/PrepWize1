@@ -14,11 +14,55 @@ import { createServer as createViteServer } from "vite";
 dotenv.config({ path: ".env.local" });
 dotenv.config();
 
+type AppEnvironment = "development" | "staging" | "production";
+
+function resolveAppEnvironment(): AppEnvironment {
+  const explicit = process.env.APP_ENV?.trim().toLowerCase();
+  if (explicit === "staging" || explicit === "production" || explicit === "development") {
+    return explicit;
+  }
+  if (process.env.NODE_ENV === "production") {
+    return "production";
+  }
+  return "development";
+}
+
+function parseAllowedOrigins(): string[] {
+  const raw = process.env.ALLOWED_ORIGINS?.trim();
+  if (!raw) return [];
+  return raw.split(",").map((origin) => origin.trim()).filter(Boolean);
+}
+
+const APP_ENV = resolveAppEnvironment();
+const APP_URL = process.env.APP_URL?.trim() || "";
+const ALLOWED_ORIGINS = parseAllowedOrigins();
+
 
 const app = express();
 const PORT = Number(process.env.PORT) || 3000;
 
 app.use(express.json());
+
+// CORS — only applies when ALLOWED_ORIGINS is configured (same codebase, per-environment config).
+app.use((req, res, next) => {
+  const requestOrigin = req.headers.origin;
+
+  if (requestOrigin && ALLOWED_ORIGINS.includes(requestOrigin)) {
+    res.setHeader("Access-Control-Allow-Origin", requestOrigin);
+    res.setHeader("Access-Control-Allow-Methods", "GET,POST,OPTIONS");
+    res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+    res.setHeader("Vary", "Origin");
+  }
+
+  if (req.method === "OPTIONS") {
+    if (requestOrigin && ALLOWED_ORIGINS.includes(requestOrigin)) {
+      return res.sendStatus(204);
+    }
+    return res.sendStatus(404);
+  }
+
+  next();
+});
 
 // Helper to get Gemini Client with lazy-loading and friendly error if key is missing
 let aiClient: GoogleGenAI | null = null;
@@ -298,7 +342,20 @@ function buildFallbackFeedbackResponse(type: string, difficulty: string, role: s
 
 // Health Check
 app.get("/api/health", (req, res) => {
-  res.json({ status: "healthy", timestamp: new Date().toISOString() });
+  res.json({
+    status: "healthy",
+    timestamp: new Date().toISOString(),
+    environment: APP_ENV,
+  });
+});
+
+// Public runtime config for the SPA (no secrets)
+app.get("/api/config", (req, res) => {
+  res.json({
+    environment: APP_ENV,
+    appUrl: APP_URL || null,
+    isStaging: APP_ENV === "staging",
+  });
 });
 
 // Endpoint: Start Interview session and generate the initial question/challenge
@@ -682,7 +739,7 @@ async function startServer() {
   }
 
   app.listen(PORT, "0.0.0.0", () => {
-    console.log(`PrepWise AI Backend running at http://0.0.0.0:${PORT}`);
+    console.log(`PrepWise AI Backend running at http://0.0.0.0:${PORT} [${APP_ENV}]`);
   });
 }
 

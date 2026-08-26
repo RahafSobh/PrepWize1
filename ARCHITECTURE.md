@@ -242,10 +242,12 @@ FeedbackReportScreen displays scores, strengths, weaknesses, summary
 
 ```bash
 npm run dev   # tsx server.ts
-# → Express on :3000 + Vite HMR
+# → Express on :3000 + Vite HMR, APP_ENV=development
 ```
 
-### Docker Production
+### Staging / Production (cloud)
+
+Same Docker image. Configure via platform env vars (`APP_ENV`, `GEMINI_API_KEY`, `APP_URL`, `ALLOWED_ORIGINS`).
 
 ```
 Dockerfile (multi-stage):
@@ -254,8 +256,7 @@ Dockerfile (multi-stage):
   HEALTHCHECK → GET /api/health
   CMD node dist/server.cjs
 
-docker-compose.yml: single prepwize service (production only)
-Dev workflow: npm run dev (not containerized)
+GET /api/config → public runtime config (environment, isStaging)
 ```
 
 ### Google AI Studio

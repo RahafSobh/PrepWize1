@@ -35,13 +35,29 @@ app.use(express.json());  // parse JSON bodies
 
 ### GET `/api/health`
 
-Health check. **לא נקרא מה-frontend** כיום.
+Health check for load balancers and Docker HEALTHCHECK.
 
 **Response:**
 ```json
 {
   "status": "healthy",
-  "timestamp": "2026-08-26T18:00:00.000Z"
+  "timestamp": "2026-08-26T18:00:00.000Z",
+  "environment": "development"
+}
+```
+
+---
+
+### GET `/api/config`
+
+Public runtime config for the SPA (no secrets). Used for staging banner and client awareness.
+
+**Response:**
+```json
+{
+  "environment": "staging",
+  "appUrl": "https://prepwize-staging.onrender.com",
+  "isStaging": true
 }
 ```
 

@@ -169,7 +169,10 @@ GEMINI_API_KEY=your_key docker compose up --build
 
 | משתנה | מיקום | תפקיד |
 |--------|-------|-------|
+| `APP_ENV` | server | `development` / `staging` / `production` — סביבה לוגית |
 | `GEMINI_API_KEY` | server | מפתח Google Gemini (חובה ל-AI אמיתי) |
+| `APP_URL` | server | URL ציבורי (logging, CORS) |
+| `ALLOWED_ORIGINS` | server | CORS — רשימת origins מופרדת בפסיקים |
 | `PORT` | server | פורט HTTP (ברירת מחדל: 3000) |
 | `NODE_ENV` | server | `production` → static files; אחרת → Vite middleware |
 | `DISABLE_HMR` | vite.config | `true` → כיבוי HMR (AI Studio agent mode) |
