@@ -10,6 +10,8 @@ import dotenv from "dotenv";
 import { GoogleGenAI, Type } from "@google/genai";
 import { createServer as createViteServer } from "vite";
 
+// `.env.local` holds local secrets (gitignored); `.env` is optional fallback.
+dotenv.config({ path: ".env.local" });
 dotenv.config();
 
 

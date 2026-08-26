@@ -135,6 +135,50 @@ Excludes `node_modules`, secrets, `PrepWize1/`, `e2e/`, docs, and other files no
 
 ---
 
+## Cloud deploy (Render / Railway)
+
+PrepWize is a **single Docker container** — no database, no extra services. Both platforms detect the root `Dockerfile` automatically.
+
+### Required environment variables
+
+Set these in the platform dashboard (**never** in the repo or Dockerfile):
+
+| Variable | Required | Notes |
+|----------|----------|-------|
+| `GEMINI_API_KEY` | Yes (for real AI) | From Google AI Studio / Gemini API |
+| `NODE_ENV` | Recommended | Set to `production` |
+| `PORT` | Auto | Render and Railway inject this; `server.ts` reads `process.env.PORT` |
+
+Without `GEMINI_API_KEY`, the app still runs using built-in server fallbacks.
+
+### Render
+
+1. **New → Web Service** → connect your GitHub repo
+2. **Environment:** Docker (uses root `Dockerfile`)
+3. **Environment variables:** add `GEMINI_API_KEY`, `NODE_ENV=production`
+4. Deploy — Render sets `PORT` automatically; health check path: `/api/health`
+
+### Railway
+
+1. **New Project → Deploy from GitHub**
+2. Railway detects `Dockerfile` and builds automatically
+3. **Variables:** add `GEMINI_API_KEY`, `NODE_ENV=production`
+4. Railway assigns a public URL and sets `PORT`
+
+### Local production container (same as cloud)
+
+```bash
+docker build -t prepwize .
+docker run -p 3000:3000 \
+  -e NODE_ENV=production \
+  -e GEMINI_API_KEY=your_key \
+  prepwize
+```
+
+Cloud platforms map their dynamic port via `-e PORT=...` internally — no change needed in the app.
+
+---
+
 ## Environment Variables
 
 ### Required for Full AI Features
