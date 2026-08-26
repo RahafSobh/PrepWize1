@@ -153,14 +153,17 @@ CI runs lint, build, E2E, and Docker build verify on every PR and push to `main`
 - **Views:** `dashboard | setup | simulator | feedback | pricing` (ראה `App.tsx`).
 - **Plan gating:** Free — מקסימום 3 סימולציות; System Design חסום ב-Free.
 - **SimulatorScreen:** הלב של ה-UX — chat, editor, code run, feedback generation.
-- **Auth:** mock בלבד (`AuthScreen` + `setTimeout`) — אין backend auth.
+- **Auth:** Google Sign-In (server-verified ID token + httpOnly cookie) או **demo auth** (`POST /api/auth/demo`) ב-development בלבד. `isAuthenticated` נקבע מ-`/api/auth/me` — לא מ-localStorage flag.
 
 ### Backend (`server.ts`)
 
 - Monolith יחיד — Express משרת API + frontend (Vite dev / static prod).
-- **Endpoints:** `/api/health`, `/api/interview/start`, `/api/interview/chat`, `/api/interview/feedback`, `/api/code/run`.
+- **Endpoints:** `/api/health`, `/api/config`, `/api/auth/*`, `/api/interview/*`, `/api/code/run`.
+- **Auth middleware:** `/api/interview/*` ו-`/api/code/run` דורשים session cookie (`requireAuth`).
+- **Rate limiting:** `express-rate-limit` על `/api/*` ו-AI routes.
+- **Security headers:** `helmet` (CSP ב-production).
 - **Fallbacks:** כל endpoint AI יש לו generator מקומי אם Gemini נכשל.
-- **`/api/code/run`:** JavaScript/TypeScript — `Function` constructor; שפות אחרות — mock results.
+- **`/api/code/run`:** JavaScript/TypeScript — `Function` constructor (dev/staging בלבד); **מושבת ב-production** (`503`). שפות אחרות — mock results.
 
 ### AI Integration
 
@@ -183,26 +186,29 @@ CI runs lint, build, E2E, and Docker build verify on every PR and push to `main`
 | `ALLOWED_ORIGINS` | server | CORS — רשימת origins מופרדת בפסיקים |
 | `PORT` | server | פורט HTTP (ברירת מחדל: 3000) |
 | `NODE_ENV` | server | `production` → static files; אחרת → Vite middleware |
+| `ALLOW_DEMO_AUTH` | server | `true` — demo login גם כש-Google מוגדר (לא ב-production) |
 | `DISABLE_HMR` | vite.config | `true` → כיבוי HMR (AI Studio agent mode) |
 
 ### localStorage keys (client)
 
 | Key | תוכן |
 |-----|------|
-| `prepwise_authenticated` | `"true"` / absent |
 | `prepwise_profile` | `UserProfile` JSON |
 | `prepwise_sessions` | `InterviewSession[]` JSON |
 | `prepwise_onboarded` | onboarding flag |
+
+> **Auth state** נשמר ב-httpOnly cookie (`prepwize_session`) — לא ב-localStorage.
 
 ---
 
 ## אבטחה
 
 1. **GEMINI_API_KEY** — server-side בלבד; never in frontend bundle.
-2. **Code execution** — `/api/code/run` משתמש ב-`Function` constructor; לא sandbox אמיתי. אל תרחיב בלי הערכת סיכונים.
-3. **Auth mock** — אין validation server-side; אל תטען שיש אבטחה אמיתית.
+2. **Code execution** — `/api/code/run` מושבת ב-production; ב-dev/staging עדיין `Function`/`eval` — לא sandbox אמיתי.
+3. **Auth** — session cookie server-side; demo auth רק כש-`demoAuthEnabled` (לא production).
 4. **`.env*`** — ב-`.gitignore`; אל תcommit secrets.
-5. **User-Agent** — `aistudio-build` ב-Gemini client (AI Studio requirement).
+5. **Security skill** — `.cursor/skills/security-code-review/` לבדיקות לפני deploy.
+6. **User-Agent** — `aistudio-build` ב-Gemini client (AI Studio requirement).
 
 ---
 

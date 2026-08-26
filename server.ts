@@ -6,6 +6,8 @@
 import express from "express";
 import path from "path";
 import cookieParser from "cookie-parser";
+import helmet from "helmet";
+import rateLimit from "express-rate-limit";
 import { OAuth2Client } from "google-auth-library";
 import * as jose from "jose";
 
@@ -46,9 +48,28 @@ const APP_ENV = resolveAppEnvironment();
 const APP_URL = resolveAppUrl();
 const ALLOWED_ORIGINS = parseAllowedOrigins();
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID?.trim() || "";
-const SESSION_SECRET = process.env.SESSION_SECRET?.trim() || "";
 const SESSION_COOKIE = "prepwize_session";
 const SESSION_MAX_AGE_SECONDS = 7 * 24 * 60 * 60;
+
+const MAX_HISTORY_ITEMS = 50;
+const MAX_MESSAGE_LENGTH = 4000;
+const MAX_CODE_LENGTH = 50_000;
+const MAX_TOPIC_LENGTH = 500;
+
+function resolveSessionSecret(): string {
+  const explicit = process.env.SESSION_SECRET?.trim() || "";
+  if (APP_ENV === "production" || APP_ENV === "staging") {
+    if (explicit.length < 32) {
+      console.error("FATAL: SESSION_SECRET must be at least 32 characters in staging/production.");
+      process.exit(1);
+    }
+    return explicit;
+  }
+  if (explicit.length >= 32) return explicit;
+  return "prepwize-dev-only-session-secret-32ch!";
+}
+
+const SESSION_SECRET = resolveSessionSecret();
 
 interface SessionClaims {
   sub: string;
@@ -148,12 +169,91 @@ async function readSessionFromRequest(req: express.Request): Promise<SessionClai
   return verifySessionToken(token);
 }
 
+function isDemoAuthEnabled(): boolean {
+  if (APP_ENV === "production") return false;
+  if (process.env.ALLOW_DEMO_AUTH === "true") return true;
+  return !isGoogleAuthConfigured();
+}
+
+function sendServerError(res: express.Response, context: string, err: unknown) {
+  console.error(`[${context}]`, err);
+  res.status(500).json({ error: "Internal server error" });
+}
+
+function truncateString(value: unknown, max: number): string {
+  if (typeof value !== "string") return "";
+  return value.slice(0, max);
+}
+
+function sanitizeHistory(history: unknown): Array<{ sender: string; text: string }> {
+  if (!Array.isArray(history)) return [];
+  return history.slice(-MAX_HISTORY_ITEMS).map((item) => ({
+    sender: item?.sender === "interviewer" || item?.sender === "candidate" ? item.sender : "candidate",
+    text: truncateString(item?.text, MAX_MESSAGE_LENGTH),
+  }));
+}
+
+async function requireAuth(req: express.Request, res: express.Response, next: express.NextFunction) {
+  const session = await readSessionFromRequest(req);
+  if (!session) {
+    return res.status(401).json({ error: "Unauthorized" });
+  }
+  (req as express.Request & { session: SessionClaims }).session = session;
+  next();
+}
+
+function blockCodeRunInProduction(req: express.Request, res: express.Response, next: express.NextFunction) {
+  if (APP_ENV === "production") {
+    return res.status(503).json({ error: "Code execution is disabled in production." });
+  }
+  next();
+}
 
 const app = express();
 const PORT = Number(process.env.PORT) || 3000;
 
-app.use(express.json());
+app.use(helmet({
+  contentSecurityPolicy: APP_ENV === "production" ? {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'", "https://accounts.google.com"],
+      styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+      fontSrc: ["'self'", "https://fonts.gstatic.com"],
+      imgSrc: ["'self'", "data:", "https:"],
+      connectSrc: ["'self'"],
+      frameSrc: ["https://accounts.google.com"],
+    },
+  } : false,
+  crossOriginEmbedderPolicy: false,
+}));
+
+app.use(express.json({ limit: "256kb" }));
 app.use(cookieParser());
+
+const apiRateLimiter = rateLimit({
+  windowMs: 60_000,
+  max: 120,
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+const aiRateLimiter = rateLimit({
+  windowMs: 60_000,
+  max: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "Too many requests. Please try again later." },
+});
+
+const authRateLimiter = rateLimit({
+  windowMs: 15 * 60_000,
+  max: APP_ENV === "production" || APP_ENV === "staging" ? 15 : 1000,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "Too many authentication attempts." },
+});
+
+app.use("/api/", apiRateLimiter);
 
 // CORS — only applies when ALLOWED_ORIGINS is configured (same codebase, per-environment config).
 app.use((req, res, next) => {
@@ -469,12 +569,13 @@ app.get("/api/config", (req, res) => {
     appUrl: APP_URL || null,
     isStaging: APP_ENV === "staging",
     googleAuthEnabled: isGoogleAuthConfigured(),
+    demoAuthEnabled: isDemoAuthEnabled(),
     googleClientId: GOOGLE_CLIENT_ID || null,
   });
 });
 
 // Google Sign-In — verify GIS ID token and issue httpOnly session cookie
-app.post("/api/auth/google", async (req: express.Request, res: express.Response) => {
+app.post("/api/auth/google", authRateLimiter, async (req: express.Request, res: express.Response) => {
   try {
     if (!isGoogleAuthConfigured()) {
       return res.status(503).json({ error: "Google Sign-In is not configured on this server" });
@@ -493,6 +594,9 @@ app.post("/api/auth/google", async (req: express.Request, res: express.Response)
     if (!payload?.sub || !payload.email) {
       return res.status(401).json({ error: "Invalid Google account payload" });
     }
+    if (payload.email_verified !== true) {
+      return res.status(401).json({ error: "Google email is not verified" });
+    }
 
     const claims: SessionClaims = {
       sub: payload.sub,
@@ -504,9 +608,36 @@ app.post("/api/auth/google", async (req: express.Request, res: express.Response)
     const sessionToken = await signSessionToken(claims);
     setSessionCookie(res, sessionToken);
     res.json(buildAuthProfile(claims));
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error("Google auth failed:", err);
     res.status(401).json({ error: "Google authentication failed" });
+  }
+});
+
+// Demo auth — development / CI only; issues real httpOnly session cookie
+app.post("/api/auth/demo", authRateLimiter, async (req: express.Request, res: express.Response) => {
+  if (!isDemoAuthEnabled()) {
+    return res.status(403).json({ error: "Demo authentication is not available." });
+  }
+
+  const name = truncateString(req.body?.name, 100) || "Demo User";
+  const email = truncateString(req.body?.email, 254);
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    return res.status(400).json({ error: "Valid email is required." });
+  }
+
+  const claims: SessionClaims = {
+    sub: `demo:${email}`,
+    email,
+    name,
+  };
+
+  try {
+    const sessionToken = await signSessionToken(claims);
+    setSessionCookie(res, sessionToken);
+    res.json(buildAuthProfile(claims));
+  } catch (err: unknown) {
+    sendServerError(res, "auth/demo", err);
   }
 });
 
@@ -529,9 +660,14 @@ app.post("/api/auth/logout", (req: express.Request, res: express.Response) => {
 });
 
 // Endpoint: Start Interview session and generate the initial question/challenge
-app.post("/api/interview/start", async (req: express.Request, res: express.Response) => {
+app.post("/api/interview/start", aiRateLimiter, requireAuth, async (req: express.Request, res: express.Response) => {
   try {
-    const { type, difficulty, role, language, style, topic } = req.body;
+    const type = truncateString(req.body?.type, 50);
+    const difficulty = truncateString(req.body?.difficulty, 50);
+    const role = truncateString(req.body?.role, 50);
+    const language = truncateString(req.body?.language, 50);
+    const style = truncateString(req.body?.style, 50);
+    const topic = truncateString(req.body?.topic, MAX_TOPIC_LENGTH);
     let parsedData: any = null;
 
     try {
@@ -611,16 +747,22 @@ app.post("/api/interview/start", async (req: express.Request, res: express.Respo
     }
 
     res.json(parsedData);
-  } catch (err: any) {
-    console.error("General error in /api/interview/start:", err);
-    res.status(500).json({ error: err.message || "Failed to start interview session" });
+  } catch (err: unknown) {
+    sendServerError(res, "interview/start", err);
   }
 });
 
 // Endpoint: Process Candidate conversation messages and maintain Chat Dialogue
-app.post("/api/interview/chat", async (req: express.Request, res: express.Response) => {
+app.post("/api/interview/chat", aiRateLimiter, requireAuth, async (req: express.Request, res: express.Response) => {
   try {
-    const { type, difficulty, role, language, style, history, currentCode, currentDraft } = req.body;
+    const type = truncateString(req.body?.type, 50);
+    const difficulty = truncateString(req.body?.difficulty, 50);
+    const role = truncateString(req.body?.role, 50);
+    const language = truncateString(req.body?.language, 50);
+    const style = truncateString(req.body?.style, 50);
+    const history = sanitizeHistory(req.body?.history);
+    const currentCode = truncateString(req.body?.currentCode, MAX_CODE_LENGTH);
+    const currentDraft = truncateString(req.body?.currentDraft, MAX_CODE_LENGTH);
     let fallbackText: any = null;
 
     try {
@@ -679,16 +821,21 @@ app.post("/api/interview/chat", async (req: express.Request, res: express.Respon
     }
 
     res.json(fallbackText);
-  } catch (err: any) {
-    console.error("General error in /api/interview/chat:", err);
-    res.status(500).json({ error: err.message || "Failed to parse chat response" });
+  } catch (err: unknown) {
+    sendServerError(res, "interview/chat", err);
   }
 });
 
 // Endpoint: Generate comprehensive Post-Interview Feedback Report
-app.post("/api/interview/feedback", async (req: express.Request, res: express.Response) => {
+app.post("/api/interview/feedback", aiRateLimiter, requireAuth, async (req: express.Request, res: express.Response) => {
   try {
-    const { type, difficulty, role, language, history, finalCode, finalDraft } = req.body;
+    const type = truncateString(req.body?.type, 50);
+    const difficulty = truncateString(req.body?.difficulty, 50);
+    const role = truncateString(req.body?.role, 50);
+    const language = truncateString(req.body?.language, 50);
+    const history = sanitizeHistory(req.body?.history);
+    const finalCode = truncateString(req.body?.finalCode, MAX_CODE_LENGTH);
+    const finalDraft = truncateString(req.body?.finalDraft, MAX_CODE_LENGTH);
     let parsedReport: any = null;
 
     try {
@@ -784,17 +931,22 @@ app.post("/api/interview/feedback", async (req: express.Request, res: express.Re
     }
 
     res.json(parsedReport);
-  } catch (err: any) {
-    console.error("General error in /api/interview/feedback:", err);
-    res.status(500).json({ error: err.message || "Failed to generate feedback report" });
+  } catch (err: unknown) {
+    sendServerError(res, "interview/feedback", err);
   }
 });
 
 // Endpoint to secure-run the user's javascript or mock run other languages
-app.post("/api/code/run", (req: express.Request, res: express.Response) => {
+app.post("/api/code/run", aiRateLimiter, requireAuth, blockCodeRunInProduction, (req: express.Request, res: express.Response) => {
   try {
-    const { code, language, testCases } = req.body;
-    
+    const code = truncateString(req.body?.code, MAX_CODE_LENGTH);
+    const language = truncateString(req.body?.language, 50);
+    const testCases = Array.isArray(req.body?.testCases) ? req.body.testCases.slice(0, 20) : [];
+
+    if (!language) {
+      return res.status(400).json({ runSuccess: false, error: "Language is required.", consoleLogs: "" });
+    }
+
     if (language.toLowerCase() !== "javascript" && language.toLowerCase() !== "typescript") {
       // Return beautiful mock testing result for Python, C++, Java, etc
       // This allows prototyping Python or JVM code beautifully with simulated case pass/fail!
@@ -881,8 +1033,9 @@ app.post("/api/code/run", (req: express.Request, res: express.Response) => {
       consoleLogs: consoleLogs.join("\n"),
       results
     });
-  } catch (err: any) {
-    res.json({ runSuccess: false, error: err.message, consoleLogs: "Code compilation failed." });
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : "Code compilation failed.";
+    res.json({ runSuccess: false, error: message, consoleLogs: "Code compilation failed." });
   }
 });
 

@@ -96,6 +96,7 @@ export default function SimulatorScreen({ preferences, onExit, onFeedbackGenerat
         const response = await fetch('/api/interview/start', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
           body: JSON.stringify(preferences)
         });
 
@@ -244,6 +245,7 @@ export default function SimulatorScreen({ preferences, onExit, onFeedbackGenerat
       const response = await fetch('/api/interview/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({
           type: preferences.type,
           difficulty: preferences.difficulty,
@@ -307,6 +309,7 @@ export default function SimulatorScreen({ preferences, onExit, onFeedbackGenerat
       const response = await fetch('/api/code/run', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({
           code: editorCode,
           language: preferences.language,
@@ -356,6 +359,7 @@ export default function SimulatorScreen({ preferences, onExit, onFeedbackGenerat
       const response = await fetch('/api/interview/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({
           type: preferences.type,
           difficulty: preferences.difficulty,
@@ -399,6 +403,7 @@ export default function SimulatorScreen({ preferences, onExit, onFeedbackGenerat
       const response = await fetch('/api/interview/feedback', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({
           type: preferences.type,
           difficulty: preferences.difficulty,

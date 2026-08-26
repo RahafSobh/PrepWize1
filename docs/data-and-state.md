@@ -108,7 +108,7 @@ interface UserProfile {
 | State | Type | Initial Source |
 |-------|------|----------------|
 | `currentView` | view union | `'dashboard'` |
-| `isAuthenticated` | boolean | `localStorage.prepwise_authenticated` |
+| `isAuthenticated` | boolean | `/api/auth/me` on bootstrap |
 | `profile` | `UserProfile` | `localStorage.prepwise_profile` or defaults |
 | `sessions` | `InterviewSession[]` | `localStorage.prepwise_sessions` or seed data |
 | `selectedPreferences` | `InterviewPreferences \| null` | `null` |
@@ -139,10 +139,11 @@ interface UserProfile {
 
 | Key | Type | Written by | Read by |
 |-----|------|------------|---------|
-| `prepwise_authenticated` | `"true"` / absent | `App.tsx` on auth/sign-out | `App.tsx` init |
 | `prepwise_profile` | `UserProfile` JSON | `App.tsx` useEffect | `App.tsx` init |
 | `prepwise_sessions` | `InterviewSession[]` JSON | `App.tsx` useEffect | `App.tsx` init, Dashboard, Achievements |
 | `prepwise_onboarded` | `"true"` / absent | `OnboardingGuide` on complete | `App.tsx` useEffect |
+
+> Session auth uses httpOnly cookie `prepwize_session` — not localStorage.
 
 ### Sync Pattern
 
@@ -160,23 +161,18 @@ useEffect(() => {
 
 ---
 
-## Auth State (Mock)
+## Auth State
 
 ```
-AuthScreen.handleSubmit()
-  → setTimeout(1200ms) simulation
-  → onAuthSuccess(UserProfile)
-    → setProfile, setIsAuthenticated(true)
-    → localStorage.prepwise_authenticated = 'true'
-    → currentView = 'dashboard'
-```
+Bootstrap → GET /api/auth/me (credentials: include)
+  → 200: setIsAuthenticated(true), merge profile
+  → 401: setIsAuthenticated(false)
 
-Sign out:
-```
-handleSignOut()
-  → setIsAuthenticated(false)
-  → localStorage.removeItem('prepwise_authenticated')
-  // profile and sessions PERSIST across sign-out
+Google Sign-In → POST /api/auth/google → httpOnly cookie
+Demo (dev only) → POST /api/auth/demo → httpOnly cookie
+
+Sign out → POST /api/auth/logout → clear cookie
+  // profile and sessions PERSIST in localStorage across sign-out
 ```
 
 ---

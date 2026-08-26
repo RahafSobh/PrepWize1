@@ -35,6 +35,7 @@ export default defineConfig({
       ...process.env,
       PORT,
       DISABLE_HMR: 'true',
+      SESSION_SECRET: process.env.SESSION_SECRET ?? 'e2e-test-session-secret-min-32-chars',
       // Keep empty so accidental un-mocked calls use server fallbacks, not Gemini.
       GEMINI_API_KEY: process.env.GEMINI_API_KEY ?? '',
     },

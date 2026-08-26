@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { seedAuthenticatedUser } from './helpers/auth';
 
 test.describe('App load', () => {
   test('loads unauthenticated and shows auth screen', async ({ page }) => {
@@ -9,24 +10,8 @@ test.describe('App load', () => {
     await expect(page.getByRole('heading', { name: /Get Started with PrepWise AI|Welcome back/i })).toBeVisible();
   });
 
-  test('loads authenticated dashboard when localStorage is seeded', async ({ page }) => {
-    await page.addInitScript(() => {
-      localStorage.setItem('prepwise_authenticated', 'true');
-      localStorage.setItem('prepwise_onboarded', 'true');
-      localStorage.setItem(
-        'prepwise_profile',
-        JSON.stringify({
-          name: 'E2E User',
-          email: 'e2e@prepwize.test',
-          avatarUrl: '🚀',
-          plan: 'Free',
-          simulationsCompleted: 0,
-          role: 'Full Stack',
-          streakCount: 1,
-        }),
-      );
-      localStorage.setItem('prepwise_sessions', JSON.stringify([]));
-    });
+  test('loads authenticated dashboard when session cookie is set', async ({ page }) => {
+    await seedAuthenticatedUser(page, { onboarded: true });
 
     await page.goto('/');
 

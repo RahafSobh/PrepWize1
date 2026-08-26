@@ -24,10 +24,14 @@
 ## Middleware
 
 ```typescript
-app.use(express.json());  // parse JSON bodies
+app.use(helmet({ ... }));           // security headers (CSP in production)
+app.use(express.json({ limit: '256kb' }));
+app.use(cookieParser());
+app.use(corsMiddleware);            // when ALLOWED_ORIGINS is set
+app.use('/api/', apiRateLimiter);
 ```
 
-אין: CORS middleware (same-origin), auth middleware, rate limiting, request logging library.
+Protected routes use `requireAuth` (httpOnly session cookie). AI routes also use `aiRateLimiter`.
 
 ---
 
@@ -59,9 +63,25 @@ Public runtime config for the SPA (no secrets). Used for staging banner and clie
   "appUrl": "https://prepwize-staging.onrender.com",
   "isStaging": true,
   "googleAuthEnabled": true,
+  "demoAuthEnabled": false,
   "googleClientId": "1234567890-abc.apps.googleusercontent.com"
 }
 ```
+
+---
+
+### POST `/api/auth/demo`
+
+Development/CI only (`demoAuthEnabled: true` in `/api/config`). Issues a real httpOnly session cookie without Google.
+
+**Request body:**
+```json
+{ "name": "Maya", "email": "user@example.com" }
+```
+
+**Response:** `UserProfile` JSON + `Set-Cookie: prepwize_session=...`
+
+**Disabled in production** (`403`).
 
 ---
 
@@ -91,6 +111,8 @@ Clears the session cookie.
 ---
 
 ### POST `/api/interview/start`
+
+**Requires authentication** (session cookie).
 
 מתחיל סימולציה — יוצר הודעת פתיחה + בעיה (Algo/System Design).
 
@@ -294,12 +316,12 @@ app.post("/api/interview/start", async (req, res) => {
     }
     res.json(parsedData);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    sendServerError(res, 'interview/start', err);
   }
 });
 ```
 
-**Agent rule:** preserve this dual-layer try/catch when modifying endpoints.
+**Agent rule:** preserve dual-layer try/catch (Gemini + fallback). Outer errors return generic `Internal server error`.
 
 ---
 
@@ -317,9 +339,11 @@ app.post("/api/interview/start", async (req, res) => {
 
 ## Security Notes
 
-- **No authentication** on API routes — all public
-- **Code execution** uses `Function` constructor — not a true sandbox
-- **No input sanitization** beyond JSON parsing
-- **No rate limiting** on Gemini calls
+- **Authentication required** on `/api/interview/*` and `/api/code/run` (401 without session)
+- **Demo auth** (`/api/auth/demo`) — development/staging only; disabled in production
+- **Code execution** — disabled in production (`503`); dev/staging uses `Function`/`eval` — not a true sandbox
+- **Rate limiting** on API, AI, and auth routes
+- **Input limits** — history length, message/code size, JSON body 256kb
+- **Generic 500 errors** to clients — details logged server-side only
 
 Do not remove fallbacks or expose API keys in responses.

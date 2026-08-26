@@ -16,7 +16,7 @@ const DEFAULT_PROFILE = {
   streakCount: 1,
 };
 
-/** Seed localStorage so tests skip the mock auth delay. */
+/** Issue a server-side demo session cookie + seed local profile data. */
 export async function seedAuthenticatedUser(
   page: Page,
   options: AuthenticatedUserOptions = {},
@@ -27,9 +27,16 @@ export async function seedAuthenticatedUser(
     simulationsCompleted: options.completedSessions ?? 0,
   };
 
+  const demoRes = await page.request.post('/api/auth/demo', {
+    data: { name: profile.name, email: profile.email },
+  });
+
+  if (!demoRes.ok()) {
+    throw new Error(`Demo auth failed (${demoRes.status()}): ${await demoRes.text()}`);
+  }
+
   await page.addInitScript(
     ({ profileValue, onboarded }) => {
-      localStorage.setItem('prepwise_authenticated', 'true');
       localStorage.setItem('prepwise_profile', JSON.stringify(profileValue));
       localStorage.setItem('prepwise_sessions', JSON.stringify([]));
       if (onboarded) {
@@ -54,7 +61,7 @@ export async function dismissOnboardingIfVisible(page: Page) {
   }
 }
 
-/** Full UI auth via GitHub OAuth shortcut (no backend). */
+/** Demo auth via GitHub shortcut button (development only). */
 export async function loginViaGithubShortcut(page: Page) {
   await page.goto('/');
   await page.locator('#auth-screen-root').waitFor({ state: 'visible' });

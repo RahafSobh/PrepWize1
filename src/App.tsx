@@ -96,6 +96,7 @@ export default function App() {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
   const [authReady, setAuthReady] = useState(false);
   const [googleClientId, setGoogleClientId] = useState<string | null>(null);
+  const [demoAuthEnabled, setDemoAuthEnabled] = useState(false);
   
   // App contexts states
   const [profile, setProfile] = useState<UserProfile>(() => {
@@ -151,6 +152,7 @@ export default function App() {
         if (configRes.ok) {
           const config = await configRes.json();
           setGoogleClientId(config.googleClientId || null);
+          setDemoAuthEnabled(Boolean(config.demoAuthEnabled));
         }
 
         if (meRes.ok) {
@@ -165,14 +167,11 @@ export default function App() {
             streakCount: prev.email === serverProfile.email ? prev.streakCount : serverProfile.streakCount,
           }));
           setIsAuthenticated(true);
-          localStorage.setItem('prepwise_authenticated', 'true');
-        } else if (localStorage.getItem('prepwise_authenticated') === 'true') {
-          setIsAuthenticated(true);
+        } else {
+          setIsAuthenticated(false);
         }
       } catch {
-        if (localStorage.getItem('prepwise_authenticated') === 'true') {
-          setIsAuthenticated(true);
-        }
+        setIsAuthenticated(false);
       } finally {
         if (!cancelled) setAuthReady(true);
       }
@@ -256,7 +255,6 @@ export default function App() {
       streakCount: prev.email === newProfile.email ? prev.streakCount : newProfile.streakCount,
     }));
     setIsAuthenticated(true);
-    localStorage.setItem('prepwise_authenticated', 'true');
     setCurrentView('dashboard');
   };
 
@@ -267,7 +265,6 @@ export default function App() {
       // ignore network errors — still clear local session
     }
     setIsAuthenticated(false);
-    localStorage.removeItem('prepwise_authenticated');
   };
 
   if (!authReady) {
@@ -283,6 +280,7 @@ export default function App() {
       onAuthSuccess={handleAuthSuccess}
       mockProfile={profile}
       googleClientId={googleClientId}
+      demoAuthEnabled={demoAuthEnabled}
     />
   );
 
@@ -350,7 +348,7 @@ export default function App() {
                   // Trigger interactive feedback toast
                   const toast = document.createElement('div');
                   toast.className = 'fixed bottom-6 right-6 bg-zinc-950 text-white border border-zinc-800 text-xs font-semibold font-mono px-4.5 py-3 rounded-xl shadow-2xl z-50 flex items-center gap-2 animate-bounce';
-                  toast.innerHTML = '🔥 Coding Streak Logged! +1 Practice Day';
+                  toast.textContent = '🔥 Coding Streak Logged! +1 Practice Day';
                   document.body.appendChild(toast);
                   setTimeout(() => {
                     toast.style.opacity = '0';

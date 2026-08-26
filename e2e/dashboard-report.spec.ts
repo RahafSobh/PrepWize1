@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { gotoDashboard } from './helpers/auth';
+import { gotoDashboard, seedAuthenticatedUser } from './helpers/auth';
 
 const SEED_SESSION = {
   id: 'e2e-historical-1',
@@ -33,21 +33,8 @@ const SEED_SESSION = {
 
 test.describe('Dashboard report flow', () => {
   test('opens a past session report from dashboard history', async ({ page }) => {
+    await seedAuthenticatedUser(page, { onboarded: true, completedSessions: 1 });
     await page.addInitScript((session) => {
-      localStorage.setItem('prepwise_authenticated', 'true');
-      localStorage.setItem('prepwise_onboarded', 'true');
-      localStorage.setItem(
-        'prepwise_profile',
-        JSON.stringify({
-          name: 'E2E User',
-          email: 'e2e@prepwize.test',
-          avatarUrl: '🚀',
-          plan: 'Free',
-          simulationsCompleted: 1,
-          role: 'Full Stack',
-          streakCount: 1,
-        }),
-      );
       localStorage.setItem('prepwise_sessions', JSON.stringify([session]));
     }, SEED_SESSION);
 

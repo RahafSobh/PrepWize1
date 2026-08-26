@@ -20,6 +20,7 @@ jobs:
       CI: true
       DISABLE_HMR: "true"
       E2E_PORT: "3099"
+      SESSION_SECRET: "ci-test-session-secret-min-32-characters"
       # Intentionally empty in CI — server uses built-in fallbacks (no API cost).
       GEMINI_API_KEY: ""
 
