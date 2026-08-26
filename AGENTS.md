@@ -123,9 +123,14 @@ npm run clean    # rm -rf dist server.js
 
 ### Docker
 
+Production only (single container). Dev stays `npm run dev`.
+
 ```bash
 docker build -t prepwize .
 docker run -p 3000:3000 -e GEMINI_API_KEY=your_key prepwize
+
+# or
+GEMINI_API_KEY=your_key docker compose up --build
 ```
 
 ### Tests

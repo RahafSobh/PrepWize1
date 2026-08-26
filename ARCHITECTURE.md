@@ -248,12 +248,14 @@ npm run dev   # tsx server.ts
 ### Docker Production
 
 ```
-Dockerfile:
-  node:22-alpine
-  npm install → npm run build
-  ENV NODE_ENV=production
-  EXPOSE 3000
-  CMD npm start  # node dist/server.cjs
+Dockerfile (multi-stage):
+  builder:  npm ci → npm run build
+  production: npm ci --omit=dev + dist/
+  HEALTHCHECK → GET /api/health
+  CMD node dist/server.cjs
+
+docker-compose.yml: single prepwize service (production only)
+Dev workflow: npm run dev (not containerized)
 ```
 
 ### Google AI Studio

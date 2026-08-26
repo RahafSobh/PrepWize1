@@ -92,19 +92,16 @@ Requires:
 
 ## Docker
 
-### Dockerfile
+PrepWize runs as a **single container** (monolith). No multi-service compose stack — there is no DB or separate frontend server to orchestrate.
 
-```dockerfile
-FROM node:22-alpine
-WORKDIR /app
-COPY package*.json ./
-RUN npm install
-COPY . .
-RUN npm run build
-ENV NODE_ENV=production
-EXPOSE 3000
-CMD ["npm", "start"]
-```
+**Development stays native:** use `npm run dev`. Docker is for production-style runs only.
+
+### Dockerfile (multi-stage)
+
+1. **builder** — `npm ci` → `npm run build` (Vite client + esbuild server bundle)
+2. **production** — production `node_modules` + `dist/` only; smaller image, no devDependencies
+
+Includes a `HEALTHCHECK` against `GET /api/health`.
 
 ### Build & Run
 
@@ -114,6 +111,14 @@ docker run -p 3000:3000 \
   -e GEMINI_API_KEY=your_key \
   prepwize
 ```
+
+### Docker Compose (production)
+
+```bash
+GEMINI_API_KEY=your_key docker compose up --build
+```
+
+Compose reads `GEMINI_API_KEY` and `PORT` from your shell or a `.env` file in the project root (for variable substitution only — not copied into the image).
 
 ### Optional env vars for Docker
 
@@ -126,7 +131,7 @@ docker run -p 8080:8080 \
 
 ### .dockerignore
 
-Excludes unnecessary files from build context (node_modules rebuilt inside container).
+Excludes `node_modules`, secrets, `PrepWize1/`, `e2e/`, docs, and other files not needed for the production build.
 
 ---
 

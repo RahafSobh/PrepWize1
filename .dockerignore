@@ -1,5 +1,32 @@
+# Dependencies & build output (rebuilt inside the image)
 node_modules
 dist
+
+# Secrets — never copy into the image
 .env
-.env.local
+.env.*
+
+# Git & IDE
 .git
+.gitignore
+.cursor
+.vscode
+
+# Nested copies / placeholders (not part of canonical build)
+PrepWize1
+PrepWize_backend
+
+# Tests & reports (not needed for production image)
+e2e
+test-results
+playwright-report
+blob-report
+playwright/.cache
+coverage
+
+# Documentation (not needed at runtime)
+docs
+AGENTS.md
+ARCHITECTURE.md
+PRD.md
+*.md

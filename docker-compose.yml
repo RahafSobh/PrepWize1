@@ -1,0 +1,17 @@
+# Production-only compose for the PrepWize monolith.
+# Development: use `npm run dev` locally (Vite HMR is not containerized).
+#
+# Usage:
+#   GEMINI_API_KEY=your_key docker compose up --build
+# Or create a `.env` file in the project root with GEMINI_API_KEY=...
+
+services:
+  prepwize:
+    build: .
+    ports:
+      - "${PORT:-3000}:${PORT:-3000}"
+    environment:
+      NODE_ENV: production
+      PORT: "${PORT:-3000}"
+      GEMINI_API_KEY: "${GEMINI_API_KEY:-}"
+    restart: unless-stopped
