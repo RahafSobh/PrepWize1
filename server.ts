@@ -33,8 +33,14 @@ function parseAllowedOrigins(): string[] {
   return raw.split(",").map((origin) => origin.trim()).filter(Boolean);
 }
 
+function resolveAppUrl(): string {
+  const raw = process.env.APP_URL?.trim() || "";
+  if (!raw || raw === "MY_APP_URL") return "";
+  return raw;
+}
+
 const APP_ENV = resolveAppEnvironment();
-const APP_URL = process.env.APP_URL?.trim() || "";
+const APP_URL = resolveAppUrl();
 const ALLOWED_ORIGINS = parseAllowedOrigins();
 
 
