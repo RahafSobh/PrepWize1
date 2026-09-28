@@ -8,7 +8,7 @@ test.describe('API error handling (client fallbacks)', () => {
     await gotoDashboard(page);
     await launchAlgoSession(page);
 
-    await expect(page.getByRole('heading', { name: 'Two Sum Definition' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: /Definition$/ })).toBeVisible();
     await expect(page.getByText(/AI Interviewer/i)).toBeVisible();
   });
 

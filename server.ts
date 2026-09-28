@@ -308,12 +308,35 @@ function getGeminiClient(): GoogleGenAI {
 // HIGH-QUALITY FALLBACK GENERATORS (FOR RESILIENCY)
 // ----------------------------------------------------
 
+function pickRandom<T>(items: T[]): T {
+  return items[Math.floor(Math.random() * items.length)];
+}
+
+function resolveFallbackTier(difficulty: string): "junior" | "mid" | "senior" {
+  const d = difficulty.toLowerCase();
+  if (d.includes("junior") || d.includes("entry")) return "junior";
+  if (d.includes("senior") || d.includes("staff") || d.includes("hard")) return "senior";
+  return "mid";
+}
+
+function algoStarterCode(
+  language: string,
+  signatures: { javascript: string; python: string; java: string; cpp: string },
+): string {
+  const lang = language.toLowerCase();
+  if (lang.includes("python")) return signatures.python;
+  if (lang.includes("java") && !lang.includes("javascript")) return signatures.java;
+  if (lang.includes("c++") || lang.includes("cpp")) return signatures.cpp;
+  return signatures.javascript;
+}
+
 function buildFallbackStartResponse(type: string, difficulty: string, role: string, language: string, style: string, topic?: string) {
   const languageClean = (language || "JavaScript").trim();
   const styleClean = (style || "Friendly").trim();
   const difficultyClean = (difficulty || "Mid-Level").trim();
-  
-  // Custom message prefix based on persona style
+  const tier = resolveFallbackTier(difficultyClean);
+  const topicHint = topic?.trim();
+
   let prefix = "";
   if (styleClean === "Friendly") {
     prefix = `Welcome! I'm thrilled to be speaking with you today. My name is Alex, and I'll be your supportive interviewer. Let's make this a positive and collaborative discussion.`;
@@ -326,160 +349,364 @@ function buildFallbackStartResponse(type: string, difficulty: string, role: stri
   }
 
   if (type === "Algo") {
-    let title = "Merge Intervals";
-    let starterCode = "";
-    let description = "";
-    let testCases: any[] = [];
+    type AlgoProblem = {
+      title: string;
+      description: string;
+      tags: string[];
+      testCases: Array<{ input: string; expected: string }>;
+      starter: { javascript: string; python: string; java: string; cpp: string };
+    };
 
-    if (difficultyClean.toLowerCase().includes("entry") || difficultyClean.toLowerCase().includes("junior")) {
-      title = "Two Sum";
-      description = `Given an array of integers \`nums\` and an integer \`target\`, return *indices of the two numbers such that they add up to \`target\`*.\n\nYou may assume that each input would have ***exactly* one solution**, and you may not use the *same* element twice.\n\n### Constraints\n- \`2 <= nums.length <= 10^3\`\n- \`-10^9 <= nums[i] <= 10^9\`\n\n### Examples\n**Input**: \`nums = [2,7,11,15]\`, \`target = 9\`\n**Output**: \`[0,1]\` \n*(Because nums[0] + nums[1] == 9, we return [0, 1])*`;
-      
-      if (languageClean.toLowerCase() === "python") {
-        starterCode = `def two_sum(nums, target):\n    # Write your Python 3 solution here\n    return []`;
-      } else if (languageClean.toLowerCase() === "java") {
-        starterCode = `class Solution {\n    public int[] twoSum(int[] nums, int target) {\n        // Write your Java solution here\n        return new int[2];\n    }\n}`;
-      } else if (languageClean.toLowerCase() === "cpp") {
-        starterCode = `class Solution {\npublic:\n    vector<int> twoSum(vector<int>& nums, int target) {\n        // Write your C++ solution here\n        return {};\n    }\n};`;
-      } else {
-        starterCode = `function twoSum(nums, target) {\n  // Write your JavaScript solution here\n  return [];\n}`;
-      }
+    const juniorProblems: AlgoProblem[] = [
+      {
+        title: "Two Sum",
+        tags: ["array", "hash", "two pointers"],
+        description: `Given an array of integers \`nums\` and an integer \`target\`, return *indices of the two numbers such that they add up to \`target\`*.\n\nYou may assume that each input would have ***exactly* one solution**, and you may not use the *same* element twice.\n\n### Constraints\n- \`2 <= nums.length <= 10^3\`\n- \`-10^9 <= nums[i] <= 10^9\`\n\n### Examples\n**Input**: \`nums = [2,7,11,15]\`, \`target = 9\`\n**Output**: \`[0,1]\``,
+        testCases: [
+          { input: "[2,7,11,15], 9", expected: "[0,1]" },
+          { input: "[3,2,4], 6", expected: "[1,2]" },
+        ],
+        starter: {
+          javascript: `function twoSum(nums, target) {\n  // Write your JavaScript solution here\n  return [];\n}`,
+          python: `def two_sum(nums, target):\n    # Write your Python 3 solution here\n    return []`,
+          java: `class Solution {\n    public int[] twoSum(int[] nums, int target) {\n        // Write your Java solution here\n        return new int[2];\n    }\n}`,
+          cpp: `class Solution {\npublic:\n    vector<int> twoSum(vector<int>& nums, int target) {\n        // Write your C++ solution here\n        return {};\n    }\n};`,
+        },
+      },
+      {
+        title: "Valid Palindrome",
+        tags: ["string", "two pointers"],
+        description: `A phrase is a palindrome if, after converting all uppercase letters into lowercase letters and removing all non-alphanumeric characters, it reads the same forward and backward.\n\nGiven a string \`s\`, return \`true\` if it is a palindrome, or \`false\` otherwise.\n\n### Examples\n**Input**: \`s = "A man, a plan, a canal: Panama"\`\n**Output**: \`true\``,
+        testCases: [
+          { input: "\"A man, a plan, a canal: Panama\"", expected: "true" },
+          { input: "\"race a car\"", expected: "false" },
+        ],
+        starter: {
+          javascript: `function isPalindrome(s) {\n  // Write your JavaScript solution here\n  return false;\n}`,
+          python: `def is_palindrome(s: str) -> bool:\n    # Write your Python 3 solution here\n    return False`,
+          java: `class Solution {\n    public boolean isPalindrome(String s) {\n        // Write your Java solution here\n        return false;\n    }\n}`,
+          cpp: `class Solution {\npublic:\n    bool isPalindrome(string s) {\n        // Write your C++ solution here\n        return false;\n    }\n};`,
+        },
+      },
+      {
+        title: "Best Time to Buy and Sell Stock",
+        tags: ["array", "sliding window"],
+        description: `You are given an array \`prices\` where \`prices[i]\` is the price of a given stock on the \`i\`th day.\n\nYou want to maximize your profit by choosing a single day to buy one stock and choosing a different day in the future to sell that stock.\n\nReturn the maximum profit you can achieve from this transaction. If you cannot achieve any profit, return \`0\`.\n\n### Examples\n**Input**: \`prices = [7,1,5,3,6,4]\`\n**Output**: \`5\``,
+        testCases: [
+          { input: "[7,1,5,3,6,4]", expected: "5" },
+          { input: "[7,6,4,3,1]", expected: "0" },
+        ],
+        starter: {
+          javascript: `function maxProfit(prices) {\n  // Write your JavaScript solution here\n  return 0;\n}`,
+          python: `def max_profit(prices):\n    # Write your Python 3 solution here\n    return 0`,
+          java: `class Solution {\n    public int maxProfit(int[] prices) {\n        // Write your Java solution here\n        return 0;\n    }\n}`,
+          cpp: `class Solution {\npublic:\n    int maxProfit(vector<int>& prices) {\n        // Write your C++ solution here\n        return 0;\n    }\n};`,
+        },
+      },
+    ];
 
-      testCases = [
-        { input: "[2,7,11,15], 9", expected: "[0,1]" },
-        { input: "[3,2,4], 6", expected: "[1,2]" }
-      ];
-    } else if (difficultyClean.toLowerCase().includes("senior") || difficultyClean.toLowerCase().includes("hard")) {
-      title = "Longest Valid Parentheses";
-      description = `Given a string containing just the characters \`'('\` and \`')'\`, find the length of the longest valid (well-formed) parentheses substring.\n\n### Constraints\n- \`0 <= s.length <= 3 * 10^4\`\n- \`s[i]\` is \`'('\`, or \`')'\`.\n\n### Examples\n**Input**: \`s = "(()"\`\n**Output**: \`2\`\n*Explanation: The longest valid parentheses substring is "()".*`;
-      
-      if (languageClean.toLowerCase() === "python") {
-        starterCode = `def longest_valid_parentheses(s: str) -> int:\n    # Write your Python 3 solution here\n    return 0`;
-      } else if (languageClean.toLowerCase() === "java") {
-        starterCode = `class Solution {\n    public int longestValidParentheses(String s) {\n        // Write your Java solution here\n        return 0;\n    }\n}`;
-      } else if (languageClean.toLowerCase() === "cpp") {
-        starterCode = `class Solution {\npublic:\n    int longestValidParentheses(string s) {\n        // Write your C++ solution here\n        return 0;\n    }\n};`;
-      } else {
-        starterCode = `function longestValidParentheses(s) {\n  // Write your JavaScript solution here\n  return 0;\n}`;
-      }
+    const midProblems: AlgoProblem[] = [
+      {
+        title: "Merge Intervals",
+        tags: ["array", "sorting", "intervals"],
+        description: `Given an array of \`intervals\` where \`intervals[i] = [start_i, end_i]\`, merge all overlapping intervals, and return *an array of the non-overlapping intervals that cover all the intervals in the input*.\n\n### Examples\n**Input**: \`intervals = [[1,3],[2,6],[8,10],[15,18]]\`\n**Output**: \`[[1,6],[8,10],[15,18]]\``,
+        testCases: [
+          { input: "[[1,3],[2,6],[8,10],[15,18]]", expected: "[[1,6],[8,10],[15,18]]" },
+          { input: "[[1,4],[4,5]]", expected: "[[1,5]]" },
+        ],
+        starter: {
+          javascript: `function merge(intervals) {\n  // Write your JavaScript solution here\n  return [];\n}`,
+          python: `def merge(intervals):\n    # Write your Python 3 solution here\n    return []`,
+          java: `class Solution {\n    public int[][] merge(int[][] intervals) {\n        // Write your Java solution here\n        return new int[0][0];\n    }\n}`,
+          cpp: `class Solution {\npublic:\n    vector<vector<int>> merge(vector<vector<int>>& intervals) {\n        // Write your C++ solution here\n        return {};\n    }\n};`,
+        },
+      },
+      {
+        title: "Group Anagrams",
+        tags: ["string", "hash", "sorting"],
+        description: `Given an array of strings \`strs\`, group the anagrams together. You can return the answer in any order.\n\nAn Anagram is a word or phrase formed by rearranging the letters of a different word or phrase, typically using all the original letters exactly once.\n\n### Examples\n**Input**: \`strs = ["eat","tea","tan","ate","nat","bat"]\`\n**Output**: \`[["bat"],["nat","tan"],["ate","eat","tea"]]\``,
+        testCases: [
+          { input: "[\"eat\",\"tea\",\"tan\",\"ate\",\"nat\",\"bat\"]", expected: "[[\"bat\"],[\"nat\",\"tan\"],[\"ate\",\"eat\",\"tea\"]]" },
+          { input: "[\"\"]", expected: "[[\"\"]]" },
+        ],
+        starter: {
+          javascript: `function groupAnagrams(strs) {\n  // Write your JavaScript solution here\n  return [];\n}`,
+          python: `def group_anagrams(strs):\n    # Write your Python 3 solution here\n    return []`,
+          java: `class Solution {\n    public List<List<String>> groupAnagrams(String[] strs) {\n        // Write your Java solution here\n        return new ArrayList<>();\n    }\n}`,
+          cpp: `class Solution {\npublic:\n    vector<vector<string>> groupAnagrams(vector<string>& strs) {\n        // Write your C++ solution here\n        return {};\n    }\n};`,
+        },
+      },
+      {
+        title: "Binary Tree Level Order Traversal",
+        tags: ["tree", "bfs", "graph"],
+        description: `Given the \`root\` of a binary tree, return the level order traversal of its nodes' values (i.e., from left to right, level by level).\n\n### Examples\n**Input**: \`root = [3,9,20,null,null,15,7]\`\n**Output**: \`[[3],[9,20],[15,7]]\``,
+        testCases: [
+          { input: "[3,9,20,null,null,15,7]", expected: "[[3],[9,20],[15,7]]" },
+          { input: "[1]", expected: "[[1]]" },
+        ],
+        starter: {
+          javascript: `function levelOrder(root) {\n  // Write your JavaScript solution here\n  return [];\n}`,
+          python: `def level_order(root):\n    # Write your Python 3 solution here\n    return []`,
+          java: `class Solution {\n    public List<List<Integer>> levelOrder(TreeNode root) {\n        // Write your Java solution here\n        return new ArrayList<>();\n    }\n}`,
+          cpp: `class Solution {\npublic:\n    vector<vector<int>> levelOrder(TreeNode* root) {\n        // Write your C++ solution here\n        return {};\n    }\n};`,
+        },
+      },
+      {
+        title: "Product of Array Except Self",
+        tags: ["array", "prefix"],
+        description: `Given an integer array \`nums\`, return an array \`answer\` such that \`answer[i]\` is equal to the product of all the elements of \`nums\` except \`nums[i]\`.\n\nThe product of any prefix or suffix of \`nums\` is **guaranteed** to fit in a 32-bit integer.\n\nYou must write an algorithm that runs in \`O(n)\` time and without using the division operation.\n\n### Examples\n**Input**: \`nums = [1,2,3,4]\`\n**Output**: \`[24,12,8,6]\``,
+        testCases: [
+          { input: "[1,2,3,4]", expected: "[24,12,8,6]" },
+          { input: "[-1,1,0,-3,3]", expected: "[0,0,9,0,0]" },
+        ],
+        starter: {
+          javascript: `function productExceptSelf(nums) {\n  // Write your JavaScript solution here\n  return [];\n}`,
+          python: `def product_except_self(nums):\n    # Write your Python 3 solution here\n    return []`,
+          java: `class Solution {\n    public int[] productExceptSelf(int[] nums) {\n        // Write your Java solution here\n        return new int[nums.length];\n    }\n}`,
+          cpp: `class Solution {\npublic:\n    vector<int> productExceptSelf(vector<int>& nums) {\n        // Write your C++ solution here\n        return {};\n    }\n};`,
+        },
+      },
+    ];
 
-      testCases = [
-        { input: "\"(()\"", expected: "2" },
-        { input: "\")()())\"", expected: "4" }
-      ];
-    } else {
-      title = "Merge Intervals";
-      description = `Given an array of \`intervals\` where \`intervals[i] = [start_i, end_i]\`, merge all overlapping intervals, and return *an array of the non-overlapping intervals that cover all the intervals in the input*.\n\n### Constraints\n- \`1 <= intervals.length <= 10^4\`\n- \`intervals[i].length == 2\`\n- \`0 <= start_i <= end_i <= 10^4\`\n\n### Examples\n**Input**: \`intervals = [[1,3],[2,6],[8,10],[15,18]]\`\n**Output**: \`[[1,6],[8,10],[15,18]]\`\n*Explanation: Since intervals [1,3] and [2,6] overlap, merge them into [1,6].*`;
-      
-      if (languageClean.toLowerCase() === "python") {
-        starterCode = `def merge(intervals):\n    # Write your Python 3 solution here\n    return []`;
-      } else if (languageClean.toLowerCase() === "java") {
-        starterCode = `class Solution {\n    public int[][] merge(int[][] intervals) {\n        // Write your Java solution here\n        return new int[0][0];\n    }\n}`;
-      } else if (languageClean.toLowerCase() === "cpp") {
-        starterCode = `class Solution {\npublic:\n    vector<vector<int>> merge(vector<vector<int>>& intervals) {\n        // Write your C++ solution here\n        return {};\n    }\n};`;
-      } else {
-        starterCode = `function merge(intervals) {\n  // Write your JavaScript solution here\n  return [];\n}`;
-      }
+    const seniorProblems: AlgoProblem[] = [
+      {
+        title: "Longest Valid Parentheses",
+        tags: ["stack", "string", "dynamic programming"],
+        description: `Given a string containing just the characters \`'('\` and \`')'\`, find the length of the longest valid (well-formed) parentheses substring.\n\n### Examples\n**Input**: \`s = "(()"\`\n**Output**: \`2\``,
+        testCases: [
+          { input: "\"(()\"", expected: "2" },
+          { input: "\")()())\"", expected: "4" },
+        ],
+        starter: {
+          javascript: `function longestValidParentheses(s) {\n  // Write your JavaScript solution here\n  return 0;\n}`,
+          python: `def longest_valid_parentheses(s: str) -> int:\n    # Write your Python 3 solution here\n    return 0`,
+          java: `class Solution {\n    public int longestValidParentheses(String s) {\n        // Write your Java solution here\n        return 0;\n    }\n}`,
+          cpp: `class Solution {\npublic:\n    int longestValidParentheses(string s) {\n        // Write your C++ solution here\n        return 0;\n    }\n};`,
+        },
+      },
+      {
+        title: "Word Ladder",
+        tags: ["bfs", "graph", "string"],
+        description: `A transformation sequence from word \`beginWord\` to word \`endWord\` using a dictionary \`wordList\` is a sequence of words such that adjacent words differ by exactly one letter and every transformed word exists in the word list.\n\nReturn the number of words in the shortest transformation sequence, or \`0\` if no such sequence exists.\n\n### Examples\n**Input**: \`beginWord = "hit"\`, \`endWord = "cog"\`, \`wordList = ["hot","dot","dog","lot","log","cog"]\`\n**Output**: \`5\``,
+        testCases: [
+          { input: "\"hit\", \"cog\", [\"hot\",\"dot\",\"dog\",\"lot\",\"log\",\"cog\"]", expected: "5" },
+          { input: "\"hit\", \"cog\", [\"hot\",\"dot\",\"dog\",\"lot\",\"log\"]", expected: "0" },
+        ],
+        starter: {
+          javascript: `function ladderLength(beginWord, endWord, wordList) {\n  // Write your JavaScript solution here\n  return 0;\n}`,
+          python: `def ladder_length(beginWord, endWord, wordList):\n    # Write your Python 3 solution here\n    return 0`,
+          java: `class Solution {\n    public int ladderLength(String beginWord, String endWord, List<String> wordList) {\n        // Write your Java solution here\n        return 0;\n    }\n}`,
+          cpp: `class Solution {\npublic:\n    int ladderLength(string beginWord, string endWord, vector<string>& wordList) {\n        // Write your C++ solution here\n        return 0;\n    }\n};`,
+        },
+      },
+      {
+        title: "Serialize and Deserialize Binary Tree",
+        tags: ["tree", "dfs", "design"],
+        description: `Design an algorithm to serialize and deserialize a binary tree. There is no restriction on how your serialization/deserialization algorithm should work, as long as a binary tree can be converted to a string and back.\n\n### Notes\nFocus on correctness and discuss time/space trade-offs for your encoding format.`,
+        testCases: [
+          { input: "[1,2,3,null,null,4,5]", expected: "[1,2,3,null,null,4,5]" },
+          { input: "[]", expected: "[]" },
+        ],
+        starter: {
+          javascript: `function serialize(root) {\n  // Write your JavaScript solution here\n  return "";\n}\n\nfunction deserialize(data) {\n  // Write your JavaScript solution here\n  return null;\n}`,
+          python: `def serialize(root):\n    # Write your Python 3 solution here\n    return ""\n\ndef deserialize(data):\n    # Write your Python 3 solution here\n    return None`,
+          java: `public class Codec {\n    public String serialize(TreeNode root) {\n        // Write your Java solution here\n        return "";\n    }\n    public TreeNode deserialize(String data) {\n        // Write your Java solution here\n        return null;\n    }\n}`,
+          cpp: `class Codec {\npublic:\n    string serialize(TreeNode* root) {\n        // Write your C++ solution here\n        return "";\n    }\n    TreeNode* deserialize(string data) {\n        // Write your C++ solution here\n        return nullptr;\n    }\n};`,
+        },
+      },
+    ];
 
-      testCases = [
-        { input: "[[1,3],[2,6],[8,10],[15,18]]", expected: "[[1,6],[8,10],[15,18]]" },
-        { input: "[[1,4],[4,5]]", expected: "[[1,5]]" }
-      ];
+    const pool = tier === "junior" ? juniorProblems : tier === "senior" ? seniorProblems : midProblems;
+    let candidates = pool;
+    if (topicHint) {
+      const topicLower = topicHint.toLowerCase();
+      const tagged = pool.filter((p) =>
+        p.tags.some((tag) => topicLower.includes(tag) || tag.includes(topicLower.split(/\s+/)[0] || "")),
+      );
+      if (tagged.length > 0) candidates = tagged;
     }
+    const selected = pickRandom(candidates);
+    const starterCode = algoStarterCode(languageClean, selected.starter);
+    const topicNote = topicHint ? ` (focus request: ${topicHint})` : "";
 
     return {
-      initialMessage: `${prefix}\n\nToday, we're going to tackle a classic engineering problem: **${title}**. This challenge will test key data structures knowledge and sort-based search boundaries.\n\nI have pre-populated a starter skeleton for you in **${languageClean}**. Take a moment to read the requirements, dry-run the sample input cases, and write your thoughts here before starting your implementation. Whenever you're ready, start coding, and click **Debug Code & Run Unit Tests** to run it!`,
+      initialMessage: `${prefix}\n\nToday, we're going to tackle a classic engineering problem: **${selected.title}**${topicNote}. This challenge will test data structures and algorithm clarity.\n\nI have pre-populated a starter skeleton for you in **${languageClean}**. Take a moment to read the requirements, dry-run the sample input cases, and write your thoughts here before starting your implementation. Whenever you're ready, start coding, and click **Debug Code & Run Unit Tests** to run it!`,
       problem: {
-        title,
-        description,
+        title: selected.title,
+        description: selected.description,
         starterCode,
-        testCases
-      }
-    };
-  } else if (type === "Behavioral") {
-    let question = "Tell me about a time when you were working on a critical feature deliverable with a strict timeline, and you realized you wouldn't be able to meet the deadline with the existing specs. How did you identify the bottleneck, communicate with stakeholders, and what was the outcome?";
-    if (difficultyClean.toLowerCase().includes("senior")) {
-      question = "Can you share a detailed experience where you had a significant technical disagreement with another senior member or architect on your team? What was the architectural design issue, how did you analyze trade-offs objectively, and how did you resolve the conflict to deliver the system?";
-    } else if (difficultyClean.toLowerCase().includes("entry")) {
-      question = "Tell me about a time you made a technical mistake on a project or encountered a bug that delayed things. How did you figure out what went wrong, what did you learn, and how did you resolve it?";
-    }
-
-    return {
-      initialMessage: `${prefix}\n\nFor our discussion today, I'd like to evaluate your leadership style, alignment priorities, and communication skills.\n\nHere is your prompt:\n\n**${question}**\n\nPlease structure your answer using the **STAR methodology** (Situation, Task, Action, Result) if possible. Feel free to draft notes in the text space, and ask me any clarifying questions!`
-    };
-  } else {
-    let designTitle = "Globally Distributed Rate Limiter";
-    let designRequirements = `- Millions of active daily client requests.\n- Scalable configuration options with low-latency overhead (< 2ms).\n- Resilience against distributed denial attacks.\n- Consistency vs Availability trade-off arguments.`;
-
-    if (difficultyClean.toLowerCase().includes("senior")) {
-      designTitle = "Real-Time Collaborative Document Canvas (Figma style)";
-      designRequirements = `- Concurrent editors from multiple geographical regions editing the same map/document canvas.\n- Convergence guarantees under network splits (e.g., OT or CRDTs).\n- Latency <= 50ms user-to-user.\n- Offline queuing and synchronization specs.`;
-    } else if (difficultyClean.toLowerCase().includes("entry")) {
-      designTitle = "Scalable URL Shortener (TinyURL)";
-      designRequirements = `- Handling high-volume write and read queries.\n- Safe mapping of 8-character hashes.\n- High availability with caching optimization.\n- Analytics log extraction.`;
-    }
-
-    return {
-      initialMessage: `${prefix}\n\nAs a **${role}**, system scalability is vital. Today, we'll design a: **${designTitle}**.\n\nHere are some of our core parameters and targets:\n${designRequirements}\n\nI'd like you to start by outlining the High-Level flow diagram, then details about the data storage, partition keys, API signatures, and bottleneck mitigations. You can write your diagrams or schemas in the canvas workspace. Whenever you have initial thoughts, send them over!`,
-      problem: {
-        title: designTitle,
-        description: `### System Design Challenge: ${designTitle}\n\nYour task is to draft a comprehensive, production-grade system architecture addressing the targets below:\n\n### High-Level Requirements\n${designRequirements}\n\n### Deliverables expected:\n1. **Functional API contract** and query signatures.\n2. **Database Schema** and scaling indices.\n3. **Component Distribution** (load balancers, CDN, key-value stores, asynchronous processing worker columns).\n4. **Failure Recovery** steps.`,
-        starterCode: `[ASCII System Architecture Draft]\n\nClient  -->  [Load Balancer]  -->  [Web Servers]  -->  [Cache Cluster]\n                                            -->  [Databases]`,
-        testCases: []
-      }
+        testCases: selected.testCases,
+      },
     };
   }
+
+  if (type === "Behavioral") {
+    const juniorQuestions = [
+      "Tell me about a time you made a technical mistake on a project or encountered a bug that delayed things. How did you figure out what went wrong, what did you learn, and how did you resolve it?",
+      "Describe a time you had to learn a new tool or concept quickly to complete a task. How did you approach the learning curve?",
+      "Tell me about a time you received critical feedback on your code or approach. How did you respond, and what changed afterward?",
+    ];
+    const midQuestions = [
+      "Tell me about a time when you were working on a critical feature deliverable with a strict timeline, and you realized you wouldn't be able to meet the deadline with the existing specs. How did you identify the bottleneck, communicate with stakeholders, and what was the outcome?",
+      "Describe a situation where you had to prioritize among several competing requests from product, design, and engineering. How did you decide, and what was the result?",
+      "Tell me about a time you improved a process or codebase that was slowing the team down. What did you change, and how did you measure impact?",
+      "Share an example of collaborating with a teammate who had a very different working style. How did you keep delivery on track?",
+    ];
+    const seniorQuestions = [
+      "Can you share a detailed experience where you had a significant technical disagreement with another senior member or architect on your team? What was the architectural design issue, how did you analyze trade-offs objectively, and how did you resolve the conflict to deliver the system?",
+      "Tell me about a time you mentored or unblocked other engineers during a high-pressure launch. How did you balance your own delivery with supporting the team?",
+      "Describe a decision you made that involved meaningful technical risk. How did you evaluate options, communicate with stakeholders, and what would you do differently?",
+    ];
+    const pool = tier === "junior" ? juniorQuestions : tier === "senior" ? seniorQuestions : midQuestions;
+    let question = pickRandom(pool);
+    if (topicHint) {
+      question = `${question}\n\nIf useful, connect your story to this theme: **${topicHint}**.`;
+    }
+
+    return {
+      initialMessage: `${prefix}\n\nFor our discussion today, I'd like to evaluate your leadership style, alignment priorities, and communication skills.\n\nHere is your prompt:\n\n**${question}**\n\nPlease structure your answer using the **STAR methodology** (Situation, Task, Action, Result) if possible. Feel free to draft notes in the text space, and ask me any clarifying questions!`,
+    };
+  }
+
+  const juniorDesigns = [
+    {
+      title: "Scalable URL Shortener (TinyURL)",
+      requirements: `- Handling high-volume write and read queries.\n- Safe mapping of 8-character hashes.\n- High availability with caching optimization.\n- Analytics log extraction.`,
+    },
+    {
+      title: "Pastebin-style Text Snippet Store",
+      requirements: `- Create and fetch text snippets by short ID.\n- Optional expiration for pastes.\n- Read-heavy traffic with caching.\n- Basic abuse prevention (rate limits).`,
+    },
+  ];
+  const midDesigns = [
+    {
+      title: "Globally Distributed Rate Limiter",
+      requirements: `- Millions of active daily client requests.\n- Scalable configuration options with low-latency overhead (< 2ms).\n- Resilience against distributed denial attacks.\n- Consistency vs Availability trade-off arguments.`,
+    },
+    {
+      title: "Notification Fan-out Service",
+      requirements: `- Push email/SMS/push notifications at high volume.\n- Per-user preference routing.\n- Retry and dead-letter handling.\n- Observability for delivery success rates.`,
+    },
+    {
+      title: "Multi-tenant Feature Flag Service",
+      requirements: `- Low-latency flag evaluation for many services.\n- Per-tenant overrides and percentage rollouts.\n- Safe config updates without downtime.\n- Audit history of flag changes.`,
+    },
+  ];
+  const seniorDesigns = [
+    {
+      title: "Real-Time Collaborative Document Canvas (Figma style)",
+      requirements: `- Concurrent editors from multiple geographical regions editing the same map/document canvas.\n- Convergence guarantees under network splits (e.g., OT or CRDTs).\n- Latency <= 50ms user-to-user.\n- Offline queuing and synchronization specs.`,
+    },
+    {
+      title: "Multi-region Ride Matching Platform",
+      requirements: `- Match riders and drivers with low latency.\n- Handle surge traffic and region failover.\n- Strong consistency for trip state transitions.\n- Geospatial indexing and ETA estimation.`,
+    },
+  ];
+  const designPool = tier === "junior" ? juniorDesigns : tier === "senior" ? seniorDesigns : midDesigns;
+  const selectedDesign = pickRandom(designPool);
+  const designTitle = topicHint ? `${selectedDesign.title} (theme: ${topicHint})` : selectedDesign.title;
+  const designRequirements = selectedDesign.requirements;
+
+  return {
+    initialMessage: `${prefix}\n\nAs a **${role}**, system scalability is vital. Today, we'll design a: **${designTitle}**.\n\nHere are some of our core parameters and targets:\n${designRequirements}\n\nI'd like you to start by outlining the High-Level flow diagram, then details about the data storage, partition keys, API signatures, and bottleneck mitigations. You can write your diagrams or schemas in the canvas workspace. Whenever you have initial thoughts, send them over!`,
+    problem: {
+      title: designTitle,
+      description: `### System Design Challenge: ${designTitle}\n\nYour task is to draft a comprehensive, production-grade system architecture addressing the targets below:\n\n### High-Level Requirements\n${designRequirements}\n\n### Deliverables expected:\n1. **Functional API contract** and query signatures.\n2. **Database Schema** and scaling indices.\n3. **Component Distribution** (load balancers, CDN, key-value stores, asynchronous processing worker columns).\n4. **Failure Recovery** steps.`,
+      starterCode: `[ASCII System Architecture Draft]\n\nClient  -->  [Load Balancer]  -->  [Web Servers]  -->  [Cache Cluster]\n                                            -->  [Databases]`,
+      testCases: [],
+    },
+  };
 }
 
-function buildFallbackChatResponse(type: string, difficulty: string, role: string, style: string, history: any[], currentCode?: string, currentDraft?: string) {
+function styleChatTone(style: string, base: string): string {
+  const s = (style || "Neutral").trim();
+  if (s === "Friendly") {
+    return `${base} You're doing well — keep walking me through your thinking.`;
+  }
+  if (s === "Strict") {
+    return `${base} Be precise: state assumptions, complexity, and why this approach is correct.`;
+  }
+  if (s === "Challenging") {
+    return `${base} Push further: what breaks at 10x scale, and what is the weakest assumption here?`;
+  }
+  return base;
+}
+
+function buildFallbackChatResponse(
+  type: string,
+  difficulty: string,
+  role: string,
+  style: string,
+  history: any[],
+  currentCode?: string,
+  currentDraft?: string,
+  topic?: string,
+) {
   const lastUserMsgStruct = history && history.length > 0 ? history[history.length - 1] : null;
   const lastUserMsg = lastUserMsgStruct ? lastUserMsgStruct.text.trim() : "";
-  
-  let styleLabel = style || "Friendly";
+  const styleLabel = style || "Friendly";
+  const topicClause = topic
+    ? ` Stay aligned with the agreed focus on "${topic}" for this ${role} ${difficulty} interview.`
+    : ` Keep expectations aligned with a ${role} at ${difficulty} level.`;
+
   let responseText = "";
 
   if (type === "Algo") {
     if (lastUserMsg.toLowerCase().includes("complexity") || lastUserMsg.toLowerCase().includes("time") || lastUserMsg.toLowerCase().includes("space")) {
-      responseText = `Reviewing the complexity arguments you highlighted: absolutely correct. Sorting would typically cost O(N log N) time, while a single linear sweep gives us O(N) auxiliary space or time depending on memory buffers. How about the worst-case scenario where all elements/intervals are disjoint? Do we have any edge cases there? Let's check those parameters.`;
+      responseText = `Reviewing the complexity arguments you highlighted: that framing is useful. Walk me through best/average/worst case explicitly, and whether auxiliary memory is necessary.${topicClause}`;
     } else if (lastUserMsg.toLowerCase().includes("done") || lastUserMsg.toLowerCase().includes("finished") || lastUserMsg.toLowerCase().includes("ready") || lastUserMsg.toLowerCase().includes("run") || lastUserMsg.toLowerCase().includes("test")) {
-      responseText = `Perfect. Your implementation logic looks highly structured and elegant! If you feel confident about the syntax correctness and unit test coverage, we should proceed to final submission. Go ahead and click the "Generate Final Assessment Feedback" button to run our detailed benchmarking analytics!`;
+      responseText = `Understood. If you are confident in correctness and coverage, run the tests and then we can move to final assessment.${topicClause}`;
     } else if (lastUserMsg.toLowerCase().includes("help") || lastUserMsg.toLowerCase().includes("hint") || lastUserMsg.toLowerCase().includes("stuck") || lastUserMsg.toLowerCase().includes("how to")) {
       if (styleLabel === "Friendly") {
-        responseText = `Don't worry! You're making excellent progress. A major hint: for this problem, sorting the inputs first relative to their start boundaries often simplifies the comparison logic immensely! Once sorted, you can just traverse sequentially and merge overlapping elements on the fly. Give that a try!`;
+        responseText = `Happy to nudge you. Consider whether a preprocess step (sorting, hashing, or a sliding window) removes repeated work — then implement that structure step by step.${topicClause}`;
+      } else if (styleLabel === "Strict" || styleLabel === "Challenging") {
+        responseText = `Pause and restate the invariant you need. If a naive approach is O(N^2), what ordering or data structure collapses the search space? Defend that choice before coding.${topicClause}`;
       } else {
-        responseText = `Let's analyze. If we process elements in random order, we must do O(N^2) pairwise matches. Is there a pre-processing step (such as sorting) that can establish a predictable sequence? Think about sorting by start limits, and let me know how you'd proceed.`;
+        responseText = `What preprocess or data structure would reduce pairwise comparisons? Outline that approach, then try it in the editor.${topicClause}`;
       }
     } else {
-      responseText = `That's a very clear explanation! Your strategy for handling the iterative tracking variables seems robust so far. Let's look closer at the starter code skeleton. How would you handle any Null or Empty constraints, or out-of-bound indexes? Feel free to start coding those edits in the editor panel!`;
+      responseText = `Clear explanation so far. Call out empty/null edge cases and how your solution handles them before you continue coding.${topicClause}`;
     }
   } else if (type === "Behavioral") {
     if (lastUserMsg.toLowerCase().includes("conflict") || lastUserMsg.toLowerCase().includes("disagree")) {
-      responseText = `I agree that objective data and small-scale experiments are some of the best tools to resolve technical differences. How did you communicate this to the stakeholders who were non-technical or focused solely on delivery schedules? How did you maintain high team morale?`;
+      responseText = `Useful conflict framing. How did you communicate trade-offs to non-technical stakeholders, and what specifically did *you* own as a ${role}?${topicClause}`;
     } else if (lastUserMsg.toLowerCase().includes("result") || lastUserMsg.toLowerCase().includes("outcome") || lastUserMsg.toLowerCase().includes("metric")) {
-      responseText = `That's a powerful outcome! Measuring success quantitatively is exactly what top companies look for. Looking back at that timeline, was there anything you would have structured differently at the beginning of the project to avoid the delay altogether?`;
+      responseText = `Strong to quantify outcomes. Looking back, what would you change earlier in the project to avoid that pressure?${topicClause}`;
     } else if (lastUserMsg.toLowerCase().includes("stuck") || lastUserMsg.toLowerCase().includes("hint") || lastUserMsg.toLowerCase().includes("clarif")) {
-      responseText = `Certainly! I can provide clarification. Try to focus on a real engineering project you worked on recently—even a smaller personal project acts as a great showcase. Describe the main system conflict, and walk me through: 1) The Action you took, 2) The exact Result in terms of response time, codebase health, or team velocity.`;
+      responseText = `Use STAR: Situation, your Task, concrete Actions you took, and measurable Results. Prefer a real engineering example for a ${difficulty} ${role}.${topicClause}`;
     } else {
-      responseText = `Thank you for sharing that context. That Situation is highly relatable in software development. Could you elaborate slightly more on your specific *Action*? Specifically, how did you collaborate with your peers and write the core solution? I'm highly interested in your individual contribution.`;
+      responseText = `Thanks for that context. Zoom into your *Action*: what decisions did you make, with whom, and what changed because of your contribution?${topicClause}`;
     }
   } else {
     if (lastUserMsg.toLowerCase().includes("db") || lastUserMsg.toLowerCase().includes("database") || lastUserMsg.toLowerCase().includes("nosql") || lastUserMsg.toLowerCase().includes("sql") || lastUserMsg.toLowerCase().includes("postgres")) {
-      responseText = `Selecting your database storage tier is a crucial decision here. Your trade-offs around read weight vs write weight make a lot of sense! Since this system requires high scalability and low latency, what caching strategies (like Redis or Memcached) or replica/sharding nodes would you add to avoid master bottlenecks?`;
+      responseText = `Storage choice matters here. Given ${difficulty} expectations for a ${role}, how would caching, replicas, or sharding protect the primary store under load?${topicClause}`;
     } else if (lastUserMsg.toLowerCase().includes("scale") || lastUserMsg.toLowerCase().includes("millions") || lastUserMsg.toLowerCase().includes("concurren") || lastUserMsg.toLowerCase().includes("race")) {
-      responseText = `Excellent points on concurrency control! When millions of requests hit our distributed nodes simultaneously, race conditions can easily corrupt state. How would you apply distributed locks, or consensus models (like Raft/ZooKeeper), or token bucket rate limiters to guarantee safety?`;
+      responseText = `Good scale thinking. How do you prevent race conditions and hot partitions — locks, idempotency, queues, or consensus?${topicClause}`;
     } else if (lastUserMsg.toLowerCase().includes("stuck") || lastUserMsg.toLowerCase().includes("hint") || lastUserMsg.toLowerCase().includes("help")) {
-      responseText = `No problem! Let's break it down. For a highly distributed service, start with standard components: a DNS resolver, a Load Balancer (round-robin or least-connections), clusters of stateless Application Servers, and a highly available distributed cache. Try modeling these key elements in your canvas draft!`;
+      responseText = `Start from clients → edge/LB → app tier → cache → data store, then add async workers where needed. Sketch that path and name one failure mode per hop.${topicClause}`;
     } else {
-      responseText = `Your architectural outline is coming together nicely! The high-level pipeline looks logical. Let's delve deeper into one component: how do we manage high-availability? If our primary data store crashes, how does the system elect a new primary or gracefully degrade?`;
+      responseText = `Architecture outline is progressing. If the primary store fails, how do you fail over or degrade while keeping the core user journey available?${topicClause}`;
     }
   }
 
-  return { text: responseText };
+  return { text: styleChatTone(styleLabel, responseText) };
 }
 
-function buildFallbackFeedbackResponse(type: string, difficulty: string, role: string, language: string, history: any[], finalCode?: string, finalDraft?: string) {
+function buildFallbackFeedbackResponse(
+  type: string,
+  difficulty: string,
+  role: string,
+  language: string,
+  history: any[],
+  finalCode?: string,
+  finalDraft?: string,
+  style?: string,
+  topic?: string,
+) {
   const userMessages = (history || []).filter((h: any) => h.sender === "candidate");
   const messageCount = userMessages.length;
+  const styleClean = style || "Neutral";
+  const topicNote = topic ? ` Focus area requested: ${topic}.` : "";
   
   let overallScore = 4;
   let technicalAccuracyScore = 4;
@@ -498,51 +725,57 @@ function buildFallbackFeedbackResponse(type: string, difficulty: string, role: s
     answerQualityScore = 4;
   }
 
+  // Stricter interviewer personas grade slightly more conservatively offline
+  if (styleClean === "Strict" || styleClean === "Challenging") {
+    overallScore = Math.max(1, overallScore - 1);
+    technicalAccuracyScore = Math.max(1, technicalAccuracyScore - 1);
+  }
+
   let strengths = [
-    "Demonstrated strong structured communication using the STAR framework.",
-    "Showed active listening and responded directly to clarifying prompts."
+    "Demonstrated structured communication throughout the session.",
+    "Responded directly to clarifying prompts from the interviewer."
   ];
   let weaknesses = [
-    "Could provide deeper quantitative metrics when describing project results.",
-    "Check for minor edge-case limits (e.g. negative bounds, extreme concurrent load spikes)."
+    "Could provide deeper quantitative metrics when describing results.",
+    "Check for edge-case limits under the chosen seniority bar."
   ];
   let improvementSuggestions = [
-    "Practice dry-running code implementations with simple test vectors before coding.",
-    "Formulate concrete numbers representing performance metrics (e.g. latency, throughput)."
+    "Practice dry-running solutions with simple test vectors before coding.",
+    "Formulate concrete numbers for latency, throughput, or impact metrics."
   ];
   let detailedSummary = "";
 
   if (type === "Algo") {
     strengths = [
-      "Excellent syntax cleanliness and naming conventions in the editor.",
-      "Clear identification of core space/time complexity bounds.",
-      "Good structure in sequential loops and boundary checks."
+      "Clear naming and structure in the editor.",
+      "Identified core space/time complexity bounds.",
+      "Reasoned through sequential logic and boundary checks."
     ];
     weaknesses = [
-      "Avoid redundant lookups or auxiliary space usage when in-place modification is possible.",
-      "Could validate inputs against extreme scales or null conditions earlier."
+      "Could tighten edge-case validation earlier.",
+      "Consider in-place or lower-memory alternatives when available."
     ];
     improvementSuggestions = [
-      "Review Heap and Segment Tree concepts for advanced interval optimization.",
-      "Build a quick list of corner cases (empty, sorted, reversed elements) on paper first."
+      `Practice ${difficulty}-level problems tailored to a ${role} interview.`,
+      "Build a corner-case checklist (empty, sorted, reversed, duplicates) before coding."
     ];
-    detailedSummary = `### Technical Assessment Review\nThe candidate showed highly structured analytical steps while exploring the algorithmic limits of the solution. Basic sorting and iterative loops were implemented cleanly in the ${language || "JavaScript"} codebase.\n\n#### Key Milestones:\n- **Algorithm Correctness**: The proposed loops cover standard inputs comfortably. We recommend looking closely at in-place optimizations to improve cache locality.\n- **Complexity Deep-Dive**: Successfully reasoned about O(N log N) boundaries. Keep practicing custom tree constructs for high-frequency algorithmic puzzles.`;
+    detailedSummary = `### Technical Assessment Review\nEvaluated as a **${difficulty} ${role}** Algo session with a **${styleClean}** interviewer.${topicNote}\n\nThe candidate showed structured analytical steps while exploring the solution. Implementation notes were reviewed in ${language || "JavaScript"}.\n\n#### Key Milestones:\n- **Algorithm Correctness**: Standard cases covered; keep validating extremes.\n- **Complexity**: Complexity discussion present; deepen worst-case and memory trade-offs.`;
   } else if (type === "Behavioral") {
-    detailedSummary = `### Behavioral Structure Analysis\nThe candidate demonstrated strong communication skills, telling a high-impact narrative in line with FAANG expectations. The Situation was clearly framed, and individual contributions were highlighted effectively.\n\n#### Recommendation areas:\n- **Result Quantifiability**: Focus on specifying team size, exact launch dates, and metric gains (e.g. "reduced system errors by 18%"). This builds maximum credibility with engineering managers.`;
+    detailedSummary = `### Behavioral Structure Analysis\nEvaluated as a **${difficulty} ${role}** Behavioral session with a **${styleClean}** interviewer.${topicNote}\n\nThe candidate used narrative structure in line with STAR expectations. Situation framing was present; push for sharper personal Actions and measurable Results.`;
   } else {
     strengths = [
-      "Strong conceptual breakdown of high-level microservices and API interfaces.",
-      "Effective usage of distributed cache nodes to mitigate central database storage loads."
+      "Broke the design into clear high-level components.",
+      "Discussed caching or scaling levers at a useful level."
     ];
     weaknesses = [
-      "Did not detail partition key hashing strategies for distributed cache storage.",
-      "Slightly vague on consensus protocols under severe region split conditions."
+      "Could go deeper on partition keys and failure modes.",
+      "Consistency vs availability trade-offs need sharper ownership."
     ];
     improvementSuggestions = [
-      "Read up on Consistent Hashing algorithms and standard Redis Cluster specifications.",
-      "Incorporate message brokers (e.g. Kafka) when designing asynchronous event queues."
+      `Rehearse ${difficulty} system-design prompts for a ${role} audience.`,
+      "Name one failure mode and mitigation for each major component."
     ];
-    detailedSummary = `### Architectural Engineering Analysis\nExcellent high-level diagramming layout. The component boundaries (Load Balancers, stateless application heads, and standard SQL replica sets) are well-defined and trace back directly to functional specifications.\n\n#### Detailed Critique:\n- **Scaling Capabilities**: The read-path is heavily optimized due to wise caching selections. However, the write-path might suffer under hot partition constraints. Focus on key-salting strategies for database horizontal splits.\n- **Communication flow**: Strong, professional trade-off discussions.`;
+    detailedSummary = `### Architectural Engineering Analysis\nEvaluated as a **${difficulty} ${role}** System Design session with a **${styleClean}** interviewer.${topicNote}\n\nHigh-level component boundaries were discussed. Strengthen write-path scaling, failover, and concrete API/data model detail.`;
   }
 
   return {
@@ -892,7 +1125,7 @@ app.post("/api/interview/start", aiRateLimiter, requireAuth, async (req: express
       };
 
       if (type === "Algo") {
-        helperInstruction = `You are designing a classic Data Structures and Algorithms interview challenge for a ${role} with ${difficulty} level guidelines. The selected programming language is ${language}. Make sure the challenge is appropriate. Provide the question prompt, dynamic starter code template, and 2-3 sample test cases. Ensure JSON output corresponds exactly to the requested Schema.`;
+        helperInstruction = `You are designing a classic Data Structures and Algorithms interview challenge for a ${role} with ${difficulty} level guidelines. The selected programming language is ${language}. Make sure the challenge is appropriate${topic ? ` and closely related to the requested topic "${topic}"` : ""}. Provide the question prompt, dynamic starter code template, and 2-3 sample test cases. Ensure JSON output corresponds exactly to the requested Schema.`;
         responseSchema.properties.problem = {
           type: Type.OBJECT,
           properties: {
@@ -915,9 +1148,9 @@ app.post("/api/interview/start", aiRateLimiter, requireAuth, async (req: express
         };
         responseSchema.required.push("problem");
       } else if (type === "Behavioral") {
-        helperInstruction = `You are asking a behavioral question suitable for a ${role} at a ${difficulty} difficulty level. Your role-playing dynamic style is ${style}. Focus on leadership, conflict resolution, technical delivery, or project deadlines in the tech space. Suggest a realistic setting. Use the STAR method later, so formulate a good situational-based question now.`;
+        helperInstruction = `You are asking a behavioral question suitable for a ${role} at a ${difficulty} difficulty level. Your role-playing dynamic style is ${style}. ${topic ? `Center the prompt around the theme "${topic}".` : "Focus on leadership, conflict resolution, technical delivery, or project deadlines in the tech space."} Suggest a realistic setting. Use the STAR method later, so formulate a good situational-based question now.`;
       } else if (type === "System Design") {
-        helperInstruction = `You are a Systems Architect interviewer. Ask a system design question appropriate for a ${role} with ${difficulty} level expectations. Design scenarios like 'Globally Distributed Rate Limiter', 'Real-Time Notification Engine', or 'Multi-region Shopping Cart Sync'. Provide requirements, scale expectations, and request the candidate to design high-level flow and data storage schemas.`;
+        helperInstruction = `You are a Systems Architect interviewer. Ask a system design question appropriate for a ${role} with ${difficulty} level expectations${topic ? ` focused on "${topic}"` : ""}. Provide requirements, scale expectations, and request the candidate to design high-level flow and data storage schemas.`;
       }
 
       const systemPrompt = `
@@ -932,7 +1165,7 @@ app.post("/api/interview/start", aiRateLimiter, requireAuth, async (req: express
         Output the contents strictly in JSON format matching the schema rules.
       `;
 
-      const requestPrompt = `Generate the initial stage of this "${type}" interview session. Make the greeting conversational, realistic, and specify the guidelines for the candidate.`;
+      const requestPrompt = `Generate the initial stage of this "${type}" interview session. Make the greeting conversational, realistic, and specify the guidelines for the candidate. Choose a fresh, varied question or problem — avoid always using the same classic prompt (for example do not always pick Two Sum, Merge Intervals, or a generic deadline story). Prefer diversity across sessions while staying appropriate for ${difficulty} ${role}.`;
 
       const response = await ai.models.generateContent({
         model: "gemini-3.5-flash",
@@ -941,7 +1174,7 @@ app.post("/api/interview/start", aiRateLimiter, requireAuth, async (req: express
           systemInstruction: systemPrompt,
           responseMimeType: "application/json",
           responseSchema: responseSchema,
-          temperature: 0.8
+          temperature: 0.95
         }
       });
 
@@ -965,6 +1198,7 @@ app.post("/api/interview/chat", aiRateLimiter, requireAuth, async (req: express.
     const role = truncateString(req.body?.role, 50);
     const language = truncateString(req.body?.language, 50);
     const style = truncateString(req.body?.style, 50);
+    const topic = truncateString(req.body?.topic, MAX_TOPIC_LENGTH);
     const history = sanitizeHistory(req.body?.history);
     const currentCode = truncateString(req.body?.currentCode, MAX_CODE_LENGTH);
     const currentDraft = truncateString(req.body?.currentDraft, MAX_CODE_LENGTH);
@@ -981,14 +1215,18 @@ app.post("/api/interview/chat", aiRateLimiter, requireAuth, async (req: express.
 
       const codeContext = (type === "Algo" && currentCode) ? `\n\n[Candidate's Current Editor Code in ${language}]:\n${currentCode}` : "";
       const designContext = (type === "System Design" && currentDraft) ? `\n\n[Candidate's Current ASCII Architecture Draft / Text spec]:\n${currentDraft}` : "";
+      const topicLine = topic
+        ? `- Agreed topic focus: "${topic}" (keep follow-ups relevant to this theme)`
+        : `- Topic focus: general for this track (still stay role/level appropriate)`;
 
       const systemPrompt = `
         You are role-playing as a highly qualified software engineering interviewer for PrepWise AI.
         Key Parameters:
         - Interview Type: ${type}
-        - Persona Style: ${style} (Friendly, Neutral, Strict, Challenging. Maintain this style consistently)
+        - Persona Style: ${style} (Friendly: encouraging; Neutral: professional; Strict: precise and demanding; Challenging: probes edge cases and scale. Maintain this style consistently in every reply.)
         - Target SWE Level: ${difficulty}
         - Candidate Role Profile: ${role}
+        ${topicLine}
         
         Your goal is to sustain a professional, highly interactive interview simulation:
         1. Challenge their explanations, ask realistic follow-up questions, request corner case handling, or suggest alternate trade-offs based on your interviewer style.
@@ -996,7 +1234,7 @@ app.post("/api/interview/chat", aiRateLimiter, requireAuth, async (req: express.
            - If Friendly: offer a helpful hint without writing code.
            - If Strict/Challenging: state the flaws calmly and ask them to reflect or correct them.
            - If Neutral: offer standard interview prompts ("How would you handle negative numbers here?").
-        3. Focus heavily on technical concepts, scalability, time/space complexity (for Algo), and clear system bottlenecks or load balancers (for System Design).
+        3. Focus heavily on technical concepts appropriate to ${type}, seniority ${difficulty}, and role ${role}.
         4. DO NOT generate the final post-interview report here. Keep the chat dialogue focused ONLY on asking or commenting as the direct interviewer. Continue asking follow-up questions or digging into their proposals.
         5. Keep your responses short, natural, and realistic (1-3 paragraphs max).
       `;
@@ -1022,7 +1260,7 @@ app.post("/api/interview/chat", aiRateLimiter, requireAuth, async (req: express.
       fallbackText = { text: response.text };
     } catch (apiErr: any) {
       console.warn("Gemini API call or client init failed in /api/interview/chat. Activating high-quality local fallback system:", apiErr);
-      fallbackText = buildFallbackChatResponse(type, difficulty, role, style, history, currentCode, currentDraft);
+      fallbackText = buildFallbackChatResponse(type, difficulty, role, style, history, currentCode, currentDraft, topic);
     }
 
     res.json(fallbackText);
@@ -1038,6 +1276,8 @@ app.post("/api/interview/feedback", aiRateLimiter, requireAuth, async (req: expr
     const difficulty = truncateString(req.body?.difficulty, 50);
     const role = truncateString(req.body?.role, 50);
     const language = truncateString(req.body?.language, 50);
+    const style = truncateString(req.body?.style, 50);
+    const topic = truncateString(req.body?.topic, MAX_TOPIC_LENGTH);
     const history = sanitizeHistory(req.body?.history);
     const finalCode = truncateString(req.body?.finalCode, MAX_CODE_LENGTH);
     const finalDraft = truncateString(req.body?.finalDraft, MAX_CODE_LENGTH);
@@ -1053,6 +1293,7 @@ app.post("/api/interview/feedback", aiRateLimiter, requireAuth, async (req: expr
 
       const codeContext = (type === "Algo" && finalCode) ? `\n\nCandidate's Final Code written in ${language}:\n${finalCode}` : "";
       const designContext = (type === "System Design" && finalDraft) ? `\n\nCandidate's Final Architecture Draft:\n${finalDraft}` : "";
+      const topicLine = topic ? `Session topic focus: "${topic}".` : "No specific topic override was set.";
 
       const systemPrompt = `
         You are the PrepWise AI feedback generation engine.
@@ -1060,6 +1301,8 @@ app.post("/api/interview/feedback", aiRateLimiter, requireAuth, async (req: expr
         
         Generative Requirements:
         - Evaluate strictly based on the target role "${role}" and target seniority Level "${difficulty}".
+        - Account for interviewer persona "${style}" when interpreting how hard the session pushed the candidate (do not punish Friendly sessions for missing ultra-harsh probing).
+        - ${topicLine}
         - Compute an overallScore on a standard scale of 1 to 5.
         - Compile a neat bulleted list of 2-5 explicit "strengths" demonstrated in the dialogue/code.
         - Compile a neat bulleted list of 2-5 clear "weaknesses" or areas omitted in the session.
@@ -1073,6 +1316,8 @@ app.post("/api/interview/feedback", aiRateLimiter, requireAuth, async (req: expr
         Interview Type: ${type}
         Target Level: ${difficulty}
         Target Role: ${role}
+        Interviewer Style: ${style}
+        Topic Focus: ${topic || "general"}
         
         Conversation Log:
         ${conversationTurns}
@@ -1132,7 +1377,7 @@ app.post("/api/interview/feedback", aiRateLimiter, requireAuth, async (req: expr
       parsedReport = JSON.parse(response.text || "{}");
     } catch (apiErr: any) {
       console.warn("Gemini API call or client init failed in /api/interview/feedback. Activating high-quality local fallback system:", apiErr);
-      parsedReport = buildFallbackFeedbackResponse(type, difficulty, role, language, history, finalCode, finalDraft);
+      parsedReport = buildFallbackFeedbackResponse(type, difficulty, role, language, history, finalCode, finalDraft, style, topic);
     }
 
     res.json(parsedReport);

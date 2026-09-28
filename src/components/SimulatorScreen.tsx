@@ -13,38 +13,66 @@ interface SimulatorScreenProps {
   onFeedbackGenerated: (session: InterviewSession) => void;
 }
 
-// Custom sample initial starter code if API fails or for offline fallback
+// Offline sample problems if `/api/interview/start` fails entirely
 const getSampleProblem = (preferences: InterviewPreferences): AlgorithmProblem => {
-  if (preferences.type === 'Algo') {
-    const lang = preferences.language.toLowerCase();
-    if (lang === 'python') {
-      return {
-        title: 'Two Sum',
-        description: 'Given an array of integers `nums` and an integer `target`, return indices of the two numbers such that they add up to `target`. You may assume each input would have exactly one solution, and you may not use the same element twice.',
-        starterCode: 'def twoSum(nums, target):\n    # Write your Py code here\n    pass\n',
-        testCases: [
-          { input: '[2,7,11,15], 9', expected: '[0, 1]' },
-          { input: '[3,2,4], 6', expected: '[1, 2]' }
-        ]
-      };
-    } else {
-      return {
-        title: 'Two Sum',
-        description: 'Given an array of integers `nums` and an integer `target`, return indices of the two numbers such that they add up to `target`. You may assume each input would have exactly one solution, and you may not use the same element twice.',
-        starterCode: 'function twoSum(nums, target) {\n    // Write your JS code here\n    return [];\n}\n',
-        testCases: [
-          { input: '[2,7,11,15], 9', expected: '[0, 1]' },
-          { input: '[3,2,4], 6', expected: '[1, 2]' }
-        ]
-      };
-    }
+  if (preferences.type !== 'Algo') {
+    return {
+      title: 'N/A',
+      description: 'N/A',
+      starterCode: '',
+      testCases: [],
+    };
   }
-  return {
-    title: 'N/A',
-    description: 'N/A',
-    starterCode: '',
-    testCases: []
-  };
+
+  const lang = preferences.language.toLowerCase();
+  const isPython = lang === 'python';
+  const pool: AlgorithmProblem[] = [
+    {
+      title: 'Two Sum',
+      description: 'Given an array of integers `nums` and an integer `target`, return indices of the two numbers such that they add up to `target`. You may assume each input would have exactly one solution, and you may not use the same element twice.',
+      starterCode: isPython
+        ? 'def twoSum(nums, target):\n    # Write your Py code here\n    pass\n'
+        : 'function twoSum(nums, target) {\n    // Write your JS code here\n    return [];\n}\n',
+      testCases: [
+        { input: '[2,7,11,15], 9', expected: '[0, 1]' },
+        { input: '[3,2,4], 6', expected: '[1, 2]' },
+      ],
+    },
+    {
+      title: 'Valid Palindrome',
+      description: 'Given a string `s`, return true if it is a palindrome after converting to lowercase and removing non-alphanumeric characters.',
+      starterCode: isPython
+        ? 'def is_palindrome(s):\n    # Write your Py code here\n    return False\n'
+        : 'function isPalindrome(s) {\n    // Write your JS code here\n    return false;\n}\n',
+      testCases: [
+        { input: '"A man, a plan, a canal: Panama"', expected: 'true' },
+        { input: '"race a car"', expected: 'false' },
+      ],
+    },
+    {
+      title: 'Merge Intervals',
+      description: 'Given an array of intervals, merge all overlapping intervals and return an array of the non-overlapping intervals that cover the input.',
+      starterCode: isPython
+        ? 'def merge(intervals):\n    # Write your Py code here\n    return []\n'
+        : 'function merge(intervals) {\n    // Write your JS code here\n    return [];\n}\n',
+      testCases: [
+        { input: '[[1,3],[2,6],[8,10],[15,18]]', expected: '[[1,6],[8,10],[15,18]]' },
+        { input: '[[1,4],[4,5]]', expected: '[[1,5]]' },
+      ],
+    },
+  ];
+
+  const topic = preferences.topic?.trim().toLowerCase();
+  if (topic) {
+    const tagged = pool.find((p) =>
+      topic.includes(p.title.toLowerCase().split(' ')[0]) ||
+      p.title.toLowerCase().includes(topic.split(/\s+/)[0] || '') ||
+      p.description.toLowerCase().includes(topic.split(/\s+/)[0] || ''),
+    );
+    if (tagged) return tagged;
+  }
+
+  return pool[Math.floor(Math.random() * pool.length)];
 };
 
 export default function SimulatorScreen({ preferences, onExit, onFeedbackGenerated }: SimulatorScreenProps) {
@@ -134,14 +162,20 @@ export default function SimulatorScreen({ preferences, onExit, onFeedbackGenerat
           setEditorCode(fallbackPb.starterCode);
         }
 
-        let welcomeFallback = `Hello there! I am your AI Interviewer roleplaying with a ${preferences.style} personality. \n\n`;
+        let welcomeFallback = `Hello there! I am your AI Interviewer roleplaying with a ${preferences.style} personality for a ${preferences.difficulty} ${preferences.role} interview. \n\n`;
+        const topicLine = preferences.topic?.trim()
+          ? ` We'll keep this session focused on **${preferences.topic}**.`
+          : '';
         if (preferences.type === 'Algo') {
-          welcomeFallback += `Today, let's solve "${fallbackPb.title}". Take a look at the instructions in the code workspace and write a working solution. Explain your logic aloud as you write your code.`;
+          welcomeFallback += `Today, let's solve "${fallbackPb.title}".${topicLine} Take a look at the instructions in the code workspace and write a working solution. Explain your logic aloud as you write your code.`;
         } else if (preferences.type === 'System Design') {
-          welcomeFallback += `For your architectural challenge today, I would like you to design a "Globally Distributed Rate Limiter with 10M active daily users". Describe your functional requirements, data storage schema, load balancing logic, and failover strategy.`;
-          setDesignDraft(`# Globally Distributed Rate Limiter\n\n## 1. Core Requirements\n- Limit transactions per user (100 req/minute)\n- Latency &lt; 5ms\n- Fully distributed across 3 global datacenters\n\n## 2. Dynamic Component Design\n`);
+          const designTitle = preferences.topic?.trim()
+            ? preferences.topic.trim()
+            : 'Globally Distributed Rate Limiter with 10M active daily users';
+          welcomeFallback += `For your architectural challenge today, I would like you to design a "${designTitle}".${topicLine} Describe your functional requirements, data storage schema, load balancing logic, and failover strategy.`;
+          setDesignDraft(`# ${designTitle}\n\n## 1. Core Requirements\n- Limit transactions per user (100 req/minute)\n- Latency &lt; 5ms\n- Fully distributed across 3 global datacenters\n\n## 2. Dynamic Component Design\n`);
         } else {
-          welcomeFallback += `Let's practice a top-tier behavioral scenario appropriate for your "${preferences.role}" profile. Could you describe a time when you had to make a critical technical architectural choice under heavy deadline constraints? How did you align conflicting viewpoints?`;
+          welcomeFallback += `Let's practice a top-tier behavioral scenario appropriate for your "${preferences.role}" profile.${topicLine} Could you describe a time when you had to make a critical technical architectural choice under heavy deadline constraints? How did you align conflicting viewpoints?`;
         }
 
         setMessages([
@@ -252,6 +286,7 @@ export default function SimulatorScreen({ preferences, onExit, onFeedbackGenerat
           role: preferences.role,
           language: preferences.language,
           style: preferences.style,
+          topic: preferences.topic,
           history: updatedMsgs,
           currentCode: preferences.type === 'Algo' ? editorCode : undefined,
           currentDraft: preferences.type === 'System Design' ? designDraft : undefined
@@ -273,9 +308,12 @@ export default function SimulatorScreen({ preferences, onExit, onFeedbackGenerat
         }
       ]);
     } catch (err: any) {
-      // Chat fallback response generator offline
+      // Chat fallback response generator offline — honor style + topic
       setTimeout(() => {
-        const fallbackInterviewerText = `That is a solid point. ${
+        const topicBit = preferences.topic?.trim()
+          ? ` Keep this tied to "${preferences.topic}".`
+          : '';
+        const fallbackInterviewerText = `That is a solid point.${topicBit} ${
           preferences.style === 'Challenging' 
             ? 'However, are there any severe performance bottlenecks or single points of failure in this setup? How would you guard against high memory consumption under a DDOS surge?'
             : preferences.style === 'Strict'
@@ -365,6 +403,8 @@ export default function SimulatorScreen({ preferences, onExit, onFeedbackGenerat
           difficulty: preferences.difficulty,
           role: preferences.role,
           language: preferences.language,
+          style: preferences.style,
+          topic: preferences.topic,
           history: updatedMsgs,
           currentCode: editorCode,
           currentDraft: designDraft
@@ -409,6 +449,8 @@ export default function SimulatorScreen({ preferences, onExit, onFeedbackGenerat
           difficulty: preferences.difficulty,
           role: preferences.role,
           language: preferences.language,
+          style: preferences.style,
+          topic: preferences.topic,
           history: messages,
           finalCode: preferences.type === 'Algo' ? editorCode : undefined,
           finalDraft: preferences.type === 'System Design' ? designDraft : undefined
@@ -435,7 +477,10 @@ export default function SimulatorScreen({ preferences, onExit, onFeedbackGenerat
     } catch (err: any) {
       console.warn("Report compile failed, formatting offline template... Reason:", err.message);
       
-      // Fallback feedback template for seamless preview experience
+      // Fallback feedback template — mirror setup prefs when API is unavailable
+      const topicNote = preferences.topic?.trim()
+        ? ` Focus area: **${preferences.topic}**.`
+        : '';
       const fallbackReport: FeedbackReport = {
         overallScore: 4,
         strengths: [
@@ -445,21 +490,29 @@ export default function SimulatorScreen({ preferences, onExit, onFeedbackGenerat
         ],
         weaknesses: [
           'Omitted some boundary extreme edge-cases initially',
-          'Could elaborate more on load balancing failovers during high spikes'
+          preferences.type === 'System Design'
+            ? 'Could elaborate more on load balancing failovers during high spikes'
+            : preferences.type === 'Behavioral'
+            ? 'Could sharpen personal Actions and measurable Results in STAR answers'
+            : 'Could deepen worst-case complexity and edge-case defense'
         ],
         technicalAccuracyScore: 4,
         communicationSkillsScore: 5,
         answerQualityScore: 4,
         improvementSuggestions: [
-          'Practice dry-run validation with empty array metrics',
-          'Study distributed locks using Redis/Redlock algorithms'
+          preferences.type === 'Algo'
+            ? 'Practice dry-run validation with empty/null edge cases'
+            : preferences.type === 'Behavioral'
+            ? 'Rehearse STAR answers with quantified outcomes for your target role'
+            : 'Study distributed locks and failover patterns for your design scope',
+          `Review ${preferences.difficulty} expectations for a ${preferences.role} interview`
         ],
         detailedSummary: `
 ### Dynamic Performance Review
+Evaluated as a **${preferences.difficulty} ${preferences.role}** ${preferences.type} session with a **${preferences.style}** interviewer.${topicNote}
 The candidate demonstrated solid problem solving.
-- **Syntax Clarity**: Coding was clean with clear variable names.
-- **STAR Completeness**: Addressed behavioral context and resolution outcome nicely.
-- **Architectural Scaling**: Discussed scaling limitations.
+- **Session fit**: Follow-ups and scoring reflect the setup choices from the start of the interview.
+- **Language / medium**: ${preferences.type === 'Algo' ? preferences.language : preferences.type}.
 
 *Proceed under real API key integration to unlock fully tailored individual report modules.*
         `
