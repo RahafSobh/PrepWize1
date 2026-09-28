@@ -12,6 +12,7 @@ test.describe('Authentication flow', () => {
 
   test('shows onboarding guide on first login and can skip it', async ({ page }) => {
     await page.goto('/');
+    await page.locator('#start-practicing-btn').click();
     await page.locator('#auth-screen-root').waitFor();
 
     await page.getByRole('button', { name: /GitHub OAuth/i }).click();
@@ -23,11 +24,12 @@ test.describe('Authentication flow', () => {
     await expect(page.locator('#dashboard-view')).toBeVisible();
   });
 
-  test('signs out and returns to auth screen', async ({ page }) => {
+  test('signs out and returns to the landing page', async ({ page }) => {
     await loginViaGithubShortcut(page);
     await dismissOnboardingIfVisible(page);
 
     await page.locator('#header-sign-out-btn').click();
-    await expect(page.locator('#auth-screen-root')).toBeVisible();
+    await expect(page.locator('#landing-page')).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Prepare Smarter. Interview Better.' })).toBeVisible();
   });
 });

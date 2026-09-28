@@ -64,6 +64,10 @@ export async function dismissOnboardingIfVisible(page: Page) {
 /** Demo auth via GitHub shortcut button (development only). */
 export async function loginViaGithubShortcut(page: Page) {
   await page.goto('/');
+  const startPracticing = page.locator('#start-practicing-btn');
+  if (await startPracticing.isVisible().catch(() => false)) {
+    await startPracticing.click();
+  }
   await page.locator('#auth-screen-root').waitFor({ state: 'visible' });
   await page.getByRole('button', { name: /GitHub OAuth/i }).click();
   await page.locator('#dashboard-view').waitFor({ state: 'visible' });

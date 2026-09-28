@@ -17,6 +17,7 @@ import AuthScreen from './components/AuthScreen';
 import OnboardingGuide from './components/OnboardingGuide';
 import StagingBanner from './components/StagingBanner';
 import InterviewCoachAgent from './components/InterviewCoachAgent';
+import LandingPage from './components/LandingPage';
 
 // Helper to provide realistic completed starting session data so the charts load beautiful immediately
 const generatePrepopulatedHistory = (): InterviewSession[] => {
@@ -98,6 +99,7 @@ export default function App() {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
   const [authReady, setAuthReady] = useState(false);
   const [googleClientId, setGoogleClientId] = useState<string | null>(null);
+  const [publicView, setPublicView] = useState<'landing' | 'auth'>('landing');
   
   // App contexts states
   const [profile, setProfile] = useState<UserProfile>(() => {
@@ -274,6 +276,7 @@ export default function App() {
     } catch {
       // ignore network errors — still clear local session
     }
+    setPublicView('landing');
     setIsAuthenticated(false);
   };
 
@@ -297,18 +300,34 @@ export default function App() {
     const unauthenticatedApp = (
       <div id="prepwise-app-root" className="min-h-screen bg-zinc-50 text-zinc-900 font-sans flex flex-col justify-between">
         <StagingBanner />
-        <main className="flex-1 max-w-7xl w-full mx-auto p-4 md:p-6 lg:p-8 flex items-center justify-center">
-          {authScreen}
-        </main>
-        <footer className="border-t border-zinc-200 bg-white py-4 px-6 text-center text-[10px] text-zinc-400 select-none">
-          <div className="max-w-7xl mx-auto flex flex-col sm:flex-row justify-between items-center gap-2">
-            <p>&copy; 2026 PrepWise AI. All simulation metrics generated in partnership with Google Gemini-3.5-flash.</p>
-            <div className="flex gap-4 font-mono">
-              <span>SLA Standard: Response &lt; 4s (P95)</span>
-              <span>Uptime: 99.5%</span>
+        {publicView === 'landing' ? (
+          <LandingPage onStartPracticing={() => setPublicView('auth')} />
+        ) : (
+          <>
+            <div className="max-w-7xl w-full mx-auto px-4 pt-4 md:px-6">
+              <button
+                id="back-to-landing-btn"
+                type="button"
+                onClick={() => setPublicView('landing')}
+                className="text-sm font-medium text-zinc-600 hover:text-zinc-950 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 rounded-md"
+              >
+                Back
+              </button>
             </div>
-          </div>
-        </footer>
+            <main className="flex-1 max-w-7xl w-full mx-auto p-4 md:p-6 lg:p-8 flex items-center justify-center">
+              {authScreen}
+            </main>
+            <footer className="border-t border-zinc-200 bg-white py-4 px-6 text-center text-[10px] text-zinc-400 select-none">
+              <div className="max-w-7xl mx-auto flex flex-col sm:flex-row justify-between items-center gap-2">
+                <p>&copy; 2026 PrepWise AI. All simulation metrics generated in partnership with Google Gemini-3.5-flash.</p>
+                <div className="flex gap-4 font-mono">
+                  <span>SLA Standard: Response &lt; 4s (P95)</span>
+                  <span>Uptime: 99.5%</span>
+                </div>
+              </div>
+            </footer>
+          </>
+        )}
       </div>
     );
 
