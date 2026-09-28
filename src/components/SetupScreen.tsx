@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { ArrowLeft, Play, Settings, Shield, Laptop, HelpCircle, Flame, MessageSquare, Info } from 'lucide-react';
 import { InterviewPreferences, InterviewType, DifficultyLevel, JobRole, InterviewerStyle } from '../types';
 
@@ -11,15 +11,26 @@ interface SetupScreenProps {
   onBack: () => void;
   onLaunch: (preferences: InterviewPreferences) => void;
   userPlan: string;
+  initialPreferences?: InterviewPreferences | null;
 }
 
-export default function SetupScreen({ onBack, onLaunch, userPlan }: SetupScreenProps) {
+export default function SetupScreen({ onBack, onLaunch, userPlan, initialPreferences }: SetupScreenProps) {
   const [type, setType] = useState<InterviewType>('Algo');
   const [difficulty, setDifficulty] = useState<DifficultyLevel>('Mid-Level');
   const [role, setRole] = useState<JobRole>('Full Stack');
   const [language, setLanguage] = useState<string>('Javascript');
   const [style, setStyle] = useState<InterviewerStyle>('Neutral');
   const [topic, setTopic] = useState<string>('');
+
+  useEffect(() => {
+    if (!initialPreferences) return;
+    setType(initialPreferences.type);
+    setDifficulty(initialPreferences.difficulty);
+    setRole(initialPreferences.role);
+    setLanguage(initialPreferences.language);
+    setStyle(initialPreferences.style);
+    setTopic(initialPreferences.topic || '');
+  }, [initialPreferences]);
   
   // Custom list of topics for helper selection
   const quickTopics = type === 'Algo' 

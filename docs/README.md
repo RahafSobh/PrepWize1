@@ -66,6 +66,7 @@
 | [`backend-api.md`](backend-api.md) | Express endpoints, request/response |
 | [`ai-integration.md`](ai-integration.md) | Gemini SDK, prompts, fallbacks |
 | [`interview-flow.md`](interview-flow.md) | Setup → Simulator → Feedback lifecycle |
+| [`agent-flow.md`](agent-flow.md) | Prep Coach agent — coaching + setup recommendations |
 | [`data-and-state.md`](data-and-state.md) | TypeScript types, localStorage |
 | [`deployment.md`](deployment.md) | Build, Docker, environment |
 

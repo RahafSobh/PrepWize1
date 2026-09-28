@@ -7,6 +7,7 @@ AI-powered interview preparation platform for students and junior developers.
 - Technical interview simulations
 - Behavioral interview practice
 - AI-generated feedback
+- **Prep Coach** — AI agent for practice planning and session recommendations
 - Progress tracking
 - Achievement system
 - Personalized recommendations

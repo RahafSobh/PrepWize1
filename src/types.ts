@@ -67,3 +67,48 @@ export interface UserProfile {
   role: JobRole;
   streakCount: number;
 }
+
+/** Prep Coach agent — conversation turn (client + API). */
+export interface AgentMessage {
+  role: 'user' | 'coach';
+  text: string;
+  timestamp: string;
+}
+
+/** Compact session summary sent to Prep Coach (no full chat/code). */
+export interface AgentSessionSummary {
+  type: InterviewType;
+  difficulty: DifficultyLevel;
+  role: JobRole;
+  overallScore?: number;
+  weaknesses?: string[];
+  strengths?: string[];
+  createdAt?: string;
+}
+
+/** Profile + recent performance context for the coach agent. */
+export interface AgentContext {
+  profile: {
+    name: string;
+    plan: UserProfile['plan'];
+    role: JobRole;
+    simulationsCompleted: number;
+    streakCount: number;
+  };
+  recentSessions: AgentSessionSummary[];
+}
+
+export interface AgentLaunchSetupAction {
+  type: 'launch_setup';
+  preferences: InterviewPreferences;
+  /** Short UI label for the recommendation (optional). */
+  label?: string;
+}
+
+export type AgentSuggestedAction = AgentLaunchSetupAction;
+
+/** Structured coach turn — no chain-of-thought fields. */
+export interface AgentTurnResponse {
+  reply: string;
+  suggestedAction?: AgentSuggestedAction;
+}

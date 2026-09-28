@@ -16,6 +16,7 @@ import Logo from './components/Logo';
 import AuthScreen from './components/AuthScreen';
 import OnboardingGuide from './components/OnboardingGuide';
 import StagingBanner from './components/StagingBanner';
+import InterviewCoachAgent from './components/InterviewCoachAgent';
 
 // Helper to provide realistic completed starting session data so the charts load beautiful immediately
 const generatePrepopulatedHistory = (): InterviewSession[] => {
@@ -92,7 +93,8 @@ const generatePrepopulatedHistory = (): InterviewSession[] => {
 };
 
 export default function App() {
-  const [currentView, setCurrentView] = useState<'dashboard' | 'setup' | 'simulator' | 'feedback' | 'pricing'>('dashboard');
+  const [currentView, setCurrentView] = useState<'dashboard' | 'setup' | 'simulator' | 'feedback' | 'pricing' | 'coach'>('dashboard');
+  const [setupDraftPreferences, setSetupDraftPreferences] = useState<InterviewPreferences | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
   const [authReady, setAuthReady] = useState(false);
   const [googleClientId, setGoogleClientId] = useState<string | null>(null);
@@ -241,6 +243,16 @@ export default function App() {
 
   const handleRetake = () => {
     setSelectedSessionForReport(null);
+    setSetupDraftPreferences(null);
+    setCurrentView('setup');
+  };
+
+  const handleOpenCoach = () => {
+    setCurrentView('coach');
+  };
+
+  const handleApplyCoachRecommendation = (preferences: InterviewPreferences) => {
+    setSetupDraftPreferences(preferences);
     setCurrentView('setup');
   };
 
@@ -408,7 +420,11 @@ export default function App() {
           <Dashboard 
             pastSessions={sessions}
             profile={profile}
-            onStartNew={() => setCurrentView('setup')}
+            onStartNew={() => {
+              setSetupDraftPreferences(null);
+              setCurrentView('setup');
+            }}
+            onOpenCoach={handleOpenCoach}
             onViewReport={(session) => {
               setSelectedSessionForReport(session);
               setCurrentView('feedback');
@@ -417,11 +433,24 @@ export default function App() {
           />
         )}
 
+        {currentView === 'coach' && (
+          <InterviewCoachAgent
+            profile={profile}
+            sessions={sessions}
+            onBack={() => setCurrentView('dashboard')}
+            onApplyLaunchSetup={handleApplyCoachRecommendation}
+          />
+        )}
+
         {currentView === 'setup' && (
           <SetupScreen 
-            onBack={() => setCurrentView('dashboard')}
+            onBack={() => {
+              setSetupDraftPreferences(null);
+              setCurrentView('dashboard');
+            }}
             onLaunch={handleLaunchSession}
             userPlan={profile.plan}
+            initialPreferences={setupDraftPreferences}
           />
         )}
 

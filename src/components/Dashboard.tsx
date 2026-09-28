@@ -13,6 +13,7 @@ interface DashboardProps {
   pastSessions: InterviewSession[];
   profile: UserProfile;
   onStartNew: () => void;
+  onOpenCoach: () => void;
   onViewReport: (session: InterviewSession) => void;
   onOpenPricing: () => void;
 }
@@ -35,7 +36,7 @@ const ADRENALINE_VIBES = [
   { level: 5, name: "Production Down Mode 🚨", desc: "Maximum alerts. Ultra speed, pure whiteboard chaos!", bonus: "Suggested style: Challenging" }
 ];
 
-export default function Dashboard({ pastSessions, profile, onStartNew, onViewReport, onOpenPricing }: DashboardProps) {
+export default function Dashboard({ pastSessions, profile, onStartNew, onOpenCoach, onViewReport, onOpenPricing }: DashboardProps) {
   const [activeTab, setActiveTab ] = useState<'overview' | 'sessions'>('overview');
   const [fortuneIndex, setFortuneIndex] = useState(0);
   const [isFortuneRolling, setIsFortuneRolling] = useState(false);
@@ -184,14 +185,26 @@ export default function Dashboard({ pastSessions, profile, onStartNew, onViewRep
             </p>
           </div>
           
-          <button
-            id="start-interview-btn"
-            onClick={onStartNew}
-            className="inline-flex items-center gap-2 px-6 py-3.5 rounded-2xl bg-white text-zinc-950 font-medium hover:bg-zinc-100 transition-all duration-200 shadow-sm hover:scale-[1.02] active:scale-[0.98] self-start md:self-auto cursor-pointer"
-          >
-            <Play className="w-4 h-4 fill-zinc-950 stroke-zinc-950" />
-            <span>Start AI Simulation</span>
-          </button>
+          <div className="flex flex-col sm:flex-row gap-3 self-start md:self-auto">
+            <button
+              id="start-interview-btn"
+              type="button"
+              onClick={onStartNew}
+              className="inline-flex items-center gap-2 px-6 py-3.5 rounded-2xl bg-white text-zinc-950 font-medium hover:bg-zinc-100 transition-all duration-200 shadow-sm hover:scale-[1.02] active:scale-[0.98] cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
+            >
+              <Play className="w-4 h-4 fill-zinc-950 stroke-zinc-950" aria-hidden="true" />
+              <span>Start AI Simulation</span>
+            </button>
+            <button
+              id="open-prep-coach-btn"
+              type="button"
+              onClick={onOpenCoach}
+              className="inline-flex items-center gap-2 px-6 py-3.5 rounded-2xl bg-emerald-600/90 text-white font-medium hover:bg-emerald-500 transition-all duration-200 shadow-sm cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300"
+            >
+              <Sparkles className="w-4 h-4" aria-hidden="true" />
+              <span>Ask Prep Coach</span>
+            </button>
+          </div>
         </div>
 
         {/* Plan display inside Header */}
