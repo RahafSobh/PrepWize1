@@ -178,11 +178,9 @@ async function readSessionFromRequest(req: express.Request): Promise<SessionClai
 }
 
 function isDemoAuthEnabled(): boolean {
-  // Google-configured production stays Google-only. Without a client ID, keep the
-  // email form so the login page is still usable.
-  if (APP_ENV === "production" && isGoogleAuthConfigured()) return false;
-  if (process.env.ALLOW_DEMO_AUTH === "true") return true;
-  return !isGoogleAuthConfigured();
+  // Email signup and sign-in stay available in every environment.
+  // Google Sign-In is an extra option when GOOGLE_CLIENT_ID is set.
+  return true;
 }
 
 function sendServerError(res: express.Response, context: string, err: unknown) {

@@ -98,7 +98,6 @@ export default function App() {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
   const [authReady, setAuthReady] = useState(false);
   const [googleClientId, setGoogleClientId] = useState<string | null>(null);
-  const [demoAuthEnabled, setDemoAuthEnabled] = useState(false);
   
   // App contexts states
   const [profile, setProfile] = useState<UserProfile>(() => {
@@ -154,7 +153,6 @@ export default function App() {
         if (configRes.ok) {
           const config = await configRes.json();
           setGoogleClientId(config.googleClientId || null);
-          setDemoAuthEnabled(Boolean(config.demoAuthEnabled));
         }
 
         if (meRes.ok) {
@@ -292,7 +290,6 @@ export default function App() {
       onAuthSuccess={handleAuthSuccess}
       mockProfile={profile}
       googleClientId={googleClientId}
-      demoAuthEnabled={demoAuthEnabled}
     />
   );
 

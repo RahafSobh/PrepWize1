@@ -13,7 +13,6 @@ interface AuthScreenProps {
   onAuthSuccess: (profile: UserProfile) => void;
   mockProfile: UserProfile;
   googleClientId?: string | null;
-  demoAuthEnabled?: boolean;
 }
 
 const AVATAR_PRESETS = [
@@ -24,7 +23,7 @@ const AVATAR_PRESETS = [
   { emoji: '💼', label: 'Product Lead Tech', desc: 'Balances high technical craftsmanship with clean stakeholder delivery.' },
 ];
 
-export default function AuthScreen({ onAuthSuccess, mockProfile, googleClientId, demoAuthEnabled = false }: AuthScreenProps) {
+export default function AuthScreen({ onAuthSuccess, mockProfile, googleClientId }: AuthScreenProps) {
   const [tab, setTab] = useState<'login' | 'signup'>('signup');
   const [name, setName] = useState(mockProfile.name || 'Maya');
   const [email, setEmail] = useState(mockProfile.email || 'rahafsobh12@gmail.com');
@@ -73,11 +72,6 @@ export default function AuthScreen({ onAuthSuccess, mockProfile, googleClientId,
     e.preventDefault();
     setErrorMessage('');
     
-    if (!demoAuthEnabled) {
-      setErrorMessage('Email sign-in is only available in development demo mode.');
-      return;
-    }
-
     if (!email) {
       setErrorMessage('Please provide a valid email address.');
       return;
@@ -223,8 +217,6 @@ export default function AuthScreen({ onAuthSuccess, mockProfile, googleClientId,
               </div>
             )}
 
-            {/* Quick Presets helper triggers — dev/demo only */}
-            {demoAuthEnabled && (
             <div id="quick-auth-helpers" className="mb-5 p-3.5 bg-zinc-50 border border-zinc-150 rounded-2xl">
               <p className="text-[10px] font-mono font-bold text-zinc-500 uppercase tracking-wide mb-2 flex items-center gap-1.5">
                 <Terminal className="w-3 h-3 text-zinc-400" />
@@ -249,10 +241,7 @@ export default function AuthScreen({ onAuthSuccess, mockProfile, googleClientId,
                 </button>
               </div>
             </div>
-            )}
 
-            {/* Primary Form — dev/demo only */}
-            {demoAuthEnabled ? (
             <form onSubmit={handleSubmit} className="space-y-4">
               {tab === 'signup' && (
                 <div>
@@ -367,19 +356,10 @@ export default function AuthScreen({ onAuthSuccess, mockProfile, googleClientId,
                 )}
               </button>
             </form>
-            ) : !googleClientId ? (
-              <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-900">
-                Authentication is not configured. Set <code className="font-mono">GOOGLE_CLIENT_ID</code> and{' '}
-                <code className="font-mono">SESSION_SECRET</code> for Google Sign-In, or run in development for demo auth.
-              </div>
-            ) : null}
 
-            {/* SSO shortcuts */}
-            {(demoAuthEnabled || googleClientId) && (
             <div className="mt-6 flex flex-col sm:flex-row items-center gap-2.5">
               <span className="text-[10px] font-mono font-bold text-zinc-400 uppercase shrink-0">Or Quick Launch With:</span>
               <div className="flex gap-2 w-full items-center">
-                {demoAuthEnabled && (
                 <button
                   type="button"
                   id="demo-github-auth-btn"
@@ -396,7 +376,6 @@ export default function AuthScreen({ onAuthSuccess, mockProfile, googleClientId,
                   <Github className="w-3.5 h-3.5" />
                   GitHub OAuth (Demo)
                 </button>
-                )}
                 {googleClientId ? (
                   <GoogleSignInButton
                     onAuthSuccess={onAuthSuccess}
@@ -416,7 +395,6 @@ export default function AuthScreen({ onAuthSuccess, mockProfile, googleClientId,
                 )}
               </div>
             </div>
-            )}
 
           </div>
 
