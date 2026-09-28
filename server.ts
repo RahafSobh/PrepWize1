@@ -178,7 +178,9 @@ async function readSessionFromRequest(req: express.Request): Promise<SessionClai
 }
 
 function isDemoAuthEnabled(): boolean {
-  if (APP_ENV === "production") return false;
+  // Google-configured production stays Google-only. Without a client ID, keep the
+  // email form so the login page is still usable.
+  if (APP_ENV === "production" && isGoogleAuthConfigured()) return false;
   if (process.env.ALLOW_DEMO_AUTH === "true") return true;
   return !isGoogleAuthConfigured();
 }
@@ -819,7 +821,7 @@ app.post("/api/auth/google", authRateLimiter, async (req: express.Request, res: 
   }
 });
 
-// Demo auth — development / CI only; issues real httpOnly session cookie
+// Demo auth — email form when Google Sign-In is not configured; issues an httpOnly session cookie
 app.post("/api/auth/demo", authRateLimiter, async (req: express.Request, res: express.Response) => {
   if (!isDemoAuthEnabled()) {
     return res.status(403).json({ error: "Demo authentication is not available." });
