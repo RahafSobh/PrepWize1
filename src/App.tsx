@@ -299,6 +299,9 @@ export default function App() {
   if (!isAuthenticated) {
     const unauthenticatedApp = (
       <div id="prepwise-app-root" className="min-h-screen bg-zinc-50 text-zinc-900 font-sans flex flex-col justify-between">
+        <a href="#main-content" className="skip-to-main">
+          Skip to main content
+        </a>
         <StagingBanner />
         {publicView === 'landing' ? (
           <LandingPage onStartPracticing={() => setPublicView('auth')} />
@@ -314,16 +317,12 @@ export default function App() {
                 Back
               </button>
             </div>
-            <main className="flex-1 max-w-7xl w-full mx-auto p-4 md:p-6 lg:p-8 flex items-center justify-center">
+            <main id="main-content" className="flex-1 max-w-7xl w-full mx-auto p-4 md:p-6 lg:p-8 flex items-center justify-center">
               {authScreen}
             </main>
             <footer className="border-t border-zinc-200 bg-white py-4 px-6 text-center text-[10px] text-zinc-400 select-none">
               <div className="max-w-7xl mx-auto flex flex-col sm:flex-row justify-between items-center gap-2">
-                <p>&copy; 2026 PrepWise AI. All simulation metrics generated in partnership with Google Gemini-3.5-flash.</p>
-                <div className="flex gap-4 font-mono">
-                  <span>SLA Standard: Response &lt; 4s (P95)</span>
-                  <span>Uptime: 99.5%</span>
-                </div>
+                <p>&copy; 2026 PrepWise AI. Interview simulations powered by Gemini when configured.</p>
               </div>
             </footer>
           </>
@@ -340,6 +339,9 @@ export default function App() {
 
   return (
     <div id="prepwise-app-root" className="min-h-screen bg-zinc-50 text-zinc-900 font-sans flex flex-col">
+      <a href="#main-content" className="skip-to-main">
+        Skip to main content
+      </a>
       <StagingBanner />
 
       {/* Visual Navigation Header bar */}
@@ -350,7 +352,7 @@ export default function App() {
             <Logo size="sm" />
             <div>
               <div className="flex items-center gap-1.5">
-                <h1 className="text-sm font-extrabold text-zinc-950 tracking-tight font-display bg-linear-to-r from-zinc-950 via-zinc-800 to-emerald-600 bg-clip-text text-transparent">PrepWise AI</h1>
+                <p className="text-sm font-extrabold text-zinc-950 tracking-tight font-display bg-linear-to-r from-zinc-950 via-zinc-800 to-emerald-600 bg-clip-text text-transparent">PrepWise AI</p>
                 <span className="text-[9px] bg-emerald-50 text-emerald-700 border border-emerald-100 font-mono px-1.5 py-0.5 rounded-full font-bold uppercase tracking-wider">Prototype</span>
               </div>
               <p className="text-[10px] text-zinc-400 font-mono">FAANG Simulation Suite</p>
@@ -358,25 +360,40 @@ export default function App() {
           </div>
 
           <div className="flex items-center gap-6 text-xs">
-            <div className="hidden md:flex items-center gap-4 text-zinc-500">
+            <nav className="hidden md:flex items-center gap-4 text-zinc-500" aria-label="Workspace">
               <span className="font-mono text-[10px] bg-zinc-150 px-2 py-0.5 rounded text-zinc-600">Local Time UTC: 2026-06-03</span>
-              <span className="text-zinc-300">|</span>
-              <span className="hover:text-zinc-900 cursor-pointer font-medium" onClick={() => setCurrentView('dashboard')}>Workspace Dashboard</span>
-              <span className="hover:text-zinc-900 cursor-pointer font-medium" onClick={() => setCurrentView('pricing')}>Pricing Limits</span>
-            </div>
+              <span className="text-zinc-300" aria-hidden="true">|</span>
+              <button
+                type="button"
+                onClick={() => setCurrentView('dashboard')}
+                className="hover:text-zinc-900 cursor-pointer font-medium bg-transparent border-0 p-0 text-inherit focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 rounded-md"
+              >
+                Workspace Dashboard
+              </button>
+              <button
+                type="button"
+                onClick={() => setCurrentView('pricing')}
+                className="hover:text-zinc-900 cursor-pointer font-medium bg-transparent border-0 p-0 text-inherit focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 rounded-md"
+              >
+                Pricing Limits
+              </button>
+            </nav>
             
             <div className="flex items-center gap-3 border-l border-zinc-200 pl-6">
               {/* Daily coding streak tracker widget */}
-              <div 
+              <button 
+                type="button"
                 id="header-streak-tracker"
                 title={`${profile.streakCount} consecutive practice days! Click to log extra practice day.`}
+                aria-label={`Log practice day. Current streak: ${profile.streakCount || 0} days`}
                 onClick={() => {
                   setProfile(prev => ({ ...prev, streakCount: prev.streakCount + 1 }));
                   
                   // Trigger interactive feedback toast
                   const toast = document.createElement('div');
-                  toast.className = 'fixed bottom-6 right-6 bg-zinc-950 text-white border border-zinc-800 text-xs font-semibold font-mono px-4.5 py-3 rounded-xl shadow-2xl z-50 flex items-center gap-2 animate-bounce';
-                  toast.textContent = '🔥 Coding Streak Logged! +1 Practice Day';
+                  toast.className = 'fixed bottom-6 right-6 bg-zinc-950 text-white border border-zinc-800 text-xs font-semibold font-mono px-4.5 py-3 rounded-xl shadow-2xl z-50 flex items-center gap-2 motion-safe:animate-bounce';
+                  toast.setAttribute('role', 'status');
+                  toast.textContent = 'Coding streak logged. Plus one practice day.';
                   document.body.appendChild(toast);
                   setTimeout(() => {
                     toast.style.opacity = '0';
@@ -384,19 +401,21 @@ export default function App() {
                     setTimeout(() => toast.remove(), 400);
                   }, 2100);
                 }}
-                className="flex items-center gap-1.5 bg-orange-50 hover:bg-orange-100/80 border border-orange-150 px-2.5 py-1.5 rounded-xl text-orange-700 transition cursor-pointer select-none active:scale-95 duration-150"
+                className="flex items-center gap-1.5 bg-orange-50 hover:bg-orange-100/80 border border-orange-150 px-2.5 py-1.5 rounded-xl text-orange-700 transition cursor-pointer select-none active:scale-95 duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
               >
-                <Flame className="w-3.5 h-3.5 text-orange-500 fill-orange-500 animate-pulse shrink-0" />
-                <span className="font-extrabold text-xs font-mono">{profile.streakCount || 0} Day Streak</span>
-              </div>
+                <Flame className="w-3.5 h-3.5 text-orange-500 fill-orange-500 motion-safe:animate-pulse shrink-0" aria-hidden="true" />
+                <span className="font-extrabold text-xs font-mono" aria-hidden="true">{profile.streakCount || 0} Day Streak</span>
+              </button>
 
               <button
+                type="button"
                 id="header-help-btn"
                 onClick={() => setIsOnboardingOpen(true)}
                 title="Interactive Playbook"
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-zinc-200 hover:border-emerald-300 hover:bg-emerald-50/25 text-zinc-700 hover:text-emerald-850 transition font-bold text-xs cursor-pointer"
+                aria-label="Open tour guide"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-zinc-200 hover:border-emerald-300 hover:bg-emerald-50/25 text-zinc-700 hover:text-emerald-850 transition font-bold text-xs cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
               >
-                <HelpCircle className="w-4 h-4 text-emerald-500 animate-pulse shrink-0" />
+                <HelpCircle className="w-4 h-4 text-emerald-500 motion-safe:animate-pulse shrink-0" aria-hidden="true" />
                 <span className="hidden sm:inline">Tour Guide</span>
               </button>
 
@@ -404,7 +423,7 @@ export default function App() {
                 <p className="font-semibold text-zinc-805 text-[11px] font-sans">User: {profile.name}</p>
                 <p className="text-[10px] text-emerald-600 font-mono font-bold uppercase">{profile.plan} Plan</p>
               </div>
-              <div className="w-8 h-8 rounded-full bg-zinc-150 border border-zinc-250 flex items-center justify-center relative shadow-xs overflow-hidden">
+              <div className="w-8 h-8 rounded-full bg-zinc-150 border border-zinc-250 flex items-center justify-center relative shadow-xs overflow-hidden" aria-hidden="true">
                 {profile.avatarUrl?.startsWith('http') ? (
                   <img src={profile.avatarUrl} alt="" className="w-full h-full object-cover" />
                 ) : profile.avatarUrl ? (
@@ -415,12 +434,14 @@ export default function App() {
               </div>
 
               <button
+                type="button"
                 id="header-sign-out-btn"
                 onClick={handleSignOut}
-                title="Sign out & switch account presets"
-                className="p-1 px-1.5 ml-1 rounded-lg border border-zinc-200 hover:border-red-200 hover:bg-rose-50/50 text-zinc-400 hover:text-red-650 transition cursor-pointer active:scale-90"
+                title="Sign out"
+                aria-label="Sign out"
+                className="p-1 px-1.5 ml-1 rounded-lg border border-zinc-200 hover:border-red-200 hover:bg-rose-50/50 text-zinc-400 hover:text-red-650 transition cursor-pointer active:scale-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
               >
-                <LogOut className="w-3.5 h-3.5" />
+                <LogOut className="w-3.5 h-3.5" aria-hidden="true" />
               </button>
             </div>
           </div>
@@ -429,7 +450,7 @@ export default function App() {
       </header>
 
       {/* Main Content viewport panel */}
-      <main className="flex-1 max-w-7xl w-full mx-auto p-4 md:p-6 lg:p-8">
+      <main id="main-content" className="flex-1 max-w-7xl w-full mx-auto p-4 md:p-6 lg:p-8" tabIndex={-1}>
         
         {/* State Route controller */}
         {currentView === 'dashboard' && (
@@ -505,11 +526,7 @@ export default function App() {
       {/* Footer system details */}
       <footer className="border-t border-zinc-200 bg-white py-4 px-6 text-center text-[10px] text-zinc-400 select-none">
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row justify-between items-center gap-2">
-          <p>&copy; 2026 PrepWise AI. All simulation metrics generated in partnership with Google Gemini-3.5-flash.</p>
-          <div className="flex gap-4">
-            <span>SLA Standard: Response &lt; 4s (P95)</span>
-            <span>Uptime: 99.5%</span>
-          </div>
+          <p>&copy; 2026 PrepWise AI. Interview simulations powered by Gemini when configured.</p>
         </div>
       </footer>
 

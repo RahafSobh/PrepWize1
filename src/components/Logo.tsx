@@ -14,7 +14,11 @@ export default function Logo({ className = '', size = 'md' }: LogoProps) {
   const dims = size === 'sm' ? 'w-8 h-8' : size === 'lg' ? 'w-16 h-16' : 'w-11 h-11';
   
   return (
-    <div id="creative-logo-shell" className={`relative flex items-center justify-center select-none group cursor-pointer ${dims} ${className}`}>
+    <div
+      id="creative-logo-shell"
+      className={`relative flex items-center justify-center select-none group ${dims} ${className}`}
+      aria-hidden="true"
+    >
       {/* Outer ambient blur circle */}
       <span className="absolute inset-0 rounded-2xl bg-radial from-emerald-400/30 to-amber-400/0 opacity-60 group-hover:opacity-100 group-hover:scale-115 blur-md transition-all duration-300 pointer-events-none" />
       
@@ -24,6 +28,7 @@ export default function Logo({ className = '', size = 'md' }: LogoProps) {
         fill="none"
         xmlns="http://www.w3.org/2000/svg"
         className="w-full h-full filter drop-shadow-[0_2px_8px_rgba(16,185,129,0.2)]"
+        focusable="false"
       >
         <defs>
           <linearGradient id="orbit-grad-1" x1="0%" y1="0%" x2="100%" y2="100%">

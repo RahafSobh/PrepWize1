@@ -150,16 +150,17 @@ CI runs lint, build, E2E, and Docker build verify on every PR and push to `main`
 ### Frontend (`src/`)
 
 - **State:** React `useState` + `useEffect`; persistence ב-localStorage.
-- **Views:** `dashboard | setup | simulator | feedback | pricing` (ראה `App.tsx`).
+- **Views:** public `landing` → `auth`, then `dashboard | setup | simulator | feedback | pricing | coach` (ראה `App.tsx`).
 - **Plan gating:** Free — מקסימום 3 סימולציות; System Design חסום ב-Free.
 - **SimulatorScreen:** הלב של ה-UX — chat, editor, code run, feedback generation.
-- **Auth:** Google Sign-In (server-verified ID token + httpOnly cookie) או **demo auth** (`POST /api/auth/demo`) ב-development בלבד. `isAuthenticated` נקבע מ-`/api/auth/me` — לא מ-localStorage flag.
+- **Prep Coach:** `InterviewCoachAgent` → `POST /api/agent/chat` (server-side Gemini + fallback).
+- **Auth:** Google Sign-In (server-verified ID token + httpOnly cookie) או **demo auth** (`POST /api/auth/demo`) כש-`demoAuthEnabled` ב-`/api/config`. `isAuthenticated` נקבע מ-`/api/auth/me` — לא מ-localStorage flag.
 
 ### Backend (`server.ts`)
 
 - Monolith יחיד — Express משרת API + frontend (Vite dev / static prod).
-- **Endpoints:** `/api/health`, `/api/config`, `/api/auth/*`, `/api/interview/*`, `/api/code/run`.
-- **Auth middleware:** `/api/interview/*` ו-`/api/code/run` דורשים session cookie (`requireAuth`).
+- **Endpoints:** `/api/health`, `/api/config`, `/api/auth/*`, `/api/interview/*`, `/api/agent/chat`, `/api/code/run`.
+- **Auth middleware:** `/api/interview/*`, `/api/agent/chat`, ו-`/api/code/run` דורשים session cookie (`requireAuth`).
 - **Rate limiting:** `express-rate-limit` על `/api/*` ו-AI routes.
 - **Security headers:** `helmet` (CSP ב-production).
 - **Fallbacks:** כל endpoint AI יש לו generator מקומי אם Gemini נכשל.

@@ -217,11 +217,12 @@ export default function Dashboard({ pastSessions, profile, onStartNew, onOpenCoa
               <p className="text-xs text-zinc-400">Current License Model</p>
               <div className="flex items-center gap-2">
                 <span className="text-sm font-semibold text-emerald-400">{profile.plan} Plan</span>
-                <button 
-                  id="upgrade-trigger-btn"
-                  onClick={onOpenPricing} 
-                  className="text-[10px] bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 hover:border-zinc-600 px-2 py-0.5 rounded text-zinc-300 font-medium transition cursor-pointer"
-                >
+              <button
+                type="button"
+                id="upgrade-trigger-btn"
+                onClick={onOpenPricing}
+                className="text-[10px] bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 hover:border-zinc-600 px-2 py-0.5 rounded text-zinc-300 font-medium transition cursor-pointer"
+              >
                   Manage Membership
                 </button>
               </div>
@@ -265,8 +266,11 @@ export default function Dashboard({ pastSessions, profile, onStartNew, onOpenCoa
         <div className="lg:col-span-2 space-y-6">
           
           {/* Sub Navigation */}
-          <div className="flex border-b border-zinc-200">
+          <div className="flex border-b border-zinc-200" role="tablist" aria-label="Dashboard sections">
             <button
+              type="button"
+              role="tab"
+              aria-selected={activeTab === 'overview'}
               onClick={() => setActiveTab('overview')}
               className={`pb-3 text-sm font-medium border-b-2 transition-all cursor-pointer ${
                 activeTab === 'overview' 
@@ -277,6 +281,9 @@ export default function Dashboard({ pastSessions, profile, onStartNew, onOpenCoa
               System Performance Overview
             </button>
             <button
+              type="button"
+              role="tab"
+              aria-selected={activeTab === 'sessions'}
               onClick={() => setActiveTab('sessions')}
               className={`pb-3 text-sm font-medium border-b-2 transition-all cursor-pointer ${
                 activeTab === 'sessions' 
@@ -436,12 +443,17 @@ export default function Dashboard({ pastSessions, profile, onStartNew, onOpenCoa
             </p>
 
             <div className="space-y-3">
+              <label htmlFor="adrenaline-level-slider" className="sr-only">
+                Interviewer vibe level from 1 to 5
+              </label>
               <input 
+                id="adrenaline-level-slider"
                 type="range" 
                 min="1" 
                 max="5" 
                 value={adrenalineLevel}
                 onChange={(e) => setAdrenalineLevel(parseInt(e.target.value))}
+                aria-valuetext={ADRENALINE_VIBES[adrenalineLevel - 1].name}
                 className="w-full accent-emerald-500 h-1.5 bg-zinc-150 rounded-lg appearance-none cursor-pointer"
               />
               
@@ -472,12 +484,15 @@ export default function Dashboard({ pastSessions, profile, onStartNew, onOpenCoa
                 AI Interview Wisdom Cookie
               </h4>
               <button 
+                type="button"
                 id="roll-fortune-btn"
                 onClick={rollFortune}
                 disabled={isFortuneRolling}
-                className="p-1.5 rounded-lg text-zinc-400 hover:text-zinc-800 hover:bg-zinc-100 transition active:scale-90 cursor-pointer"
+                aria-label="Crack another wisdom cookie"
+                aria-busy={isFortuneRolling}
+                className="p-1.5 rounded-lg text-zinc-400 hover:text-zinc-800 hover:bg-zinc-100 transition active:scale-90 cursor-pointer disabled:opacity-50"
               >
-                <RefreshCw className={`w-3.5 h-3.5 ${isFortuneRolling ? 'animate-spin text-emerald-500' : ''}`} />
+                <RefreshCw className={`w-3.5 h-3.5 ${isFortuneRolling ? 'motion-safe:animate-spin text-emerald-500' : ''}`} aria-hidden="true" />
               </button>
             </div>
 
@@ -490,16 +505,18 @@ export default function Dashboard({ pastSessions, profile, onStartNew, onOpenCoa
                 {INTERVIEW_WISDOM[fortuneIndex].category}
               </span>
               
-              <p className={`text-xs text-zinc-700 font-medium leading-relaxed transition-all duration-300 ${isFortuneRolling ? 'opacity-40 translate-x-2 blur-xs' : 'opacity-100 translate-x-0 blur-none'}`}>
+              <p className={`text-xs text-zinc-700 font-medium leading-relaxed transition-all duration-300 ${isFortuneRolling ? 'opacity-40 translate-x-2 blur-xs' : 'opacity-100 translate-x-0 blur-none'}`} aria-live="polite">
                 {INTERVIEW_WISDOM[fortuneIndex].text}
               </p>
             </div>
 
             <button 
+              type="button"
               id="click-roll-fortune-btn"
               onClick={rollFortune}
               disabled={isFortuneRolling}
-              className="w-full text-center text-[11px] font-semibold text-zinc-900 border border-zinc-200 py-2 rounded-xl bg-white hover:bg-zinc-50 hover:border-zinc-300 transition active:scale-95 cursor-pointer"
+              aria-busy={isFortuneRolling}
+              className="w-full text-center text-[11px] font-semibold text-zinc-900 border border-zinc-200 py-2 rounded-xl bg-white hover:bg-zinc-50 hover:border-zinc-300 transition active:scale-95 cursor-pointer disabled:opacity-50"
             >
               {isFortuneRolling ? 'Cracking cookie...' : 'Crack Another Wisdom Cookie! ✨'}
             </button>

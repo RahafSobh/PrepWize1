@@ -4,6 +4,7 @@ AI-powered interview preparation platform for students and junior developers.
 
 ## Features
 
+- Public landing page before sign-in
 - Technical interview simulations
 - Behavioral interview practice
 - AI-generated feedback

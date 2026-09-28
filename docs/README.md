@@ -28,6 +28,14 @@
 │   → docs/interview-flow.md
 │   → docs/frontend.md + docs/backend-api.md
 │
+├─ שינוי Prep Coach / agent?
+│   → docs/agent-flow.md
+│   → docs/backend-api.md + docs/ai-integration.md
+│
+├─ שינוי landing page / public entry?
+│   → docs/frontend.md
+│   → AGENTS.md
+│
 ├─ שינוי types / localStorage / profile?
 │   → docs/data-and-state.md
 │
@@ -48,6 +56,8 @@
 | Bug fix ב-Simulator | interview-flow, frontend, backend-api | ai-integration |
 | שינוי prompt AI | ai-integration, backend-api | interview-flow |
 | הוספת interview type | types.ts, interview-flow, backend-api, ai-integration, frontend | ARCHITECTURE |
+| Prep Coach / agent | agent-flow, backend-api, ai-integration, frontend | data-and-state |
+| Landing / public entry | frontend | AGENTS |
 | שינוי plan gating | frontend (App.tsx), data-and-state | AGENTS |
 | שיפור code runner | backend-api | interview-flow |
 | Docker / CI | deployment | AGENTS |

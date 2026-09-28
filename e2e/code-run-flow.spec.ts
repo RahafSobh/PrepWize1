@@ -13,7 +13,7 @@ test.describe('Code run flow (mocked API)', () => {
     await page.locator('#run-cases-btn').click();
     await page.locator('#simulator-loading-overlay').waitFor({ state: 'hidden' }).catch(() => {});
 
-    await page.getByRole('button', { name: 'Terminal Tests' }).click();
+    await page.getByRole('tab', { name: 'Terminal Tests' }).click();
     await expect(page.getByText(MOCK_CODE_RUN_RESPONSE.consoleLogs.trim())).toBeVisible();
     await expect(page.getByText('Case 1: Input arg ([2,7,11,15], 9)')).toBeVisible();
     await expect(page.getByText('Passed').first()).toBeVisible();
@@ -24,7 +24,7 @@ test.describe('Code run flow (mocked API)', () => {
     await page.route('**/api/code/run', (route) => route.abort('failed'));
 
     await page.locator('#run-cases-btn').click();
-    await page.getByRole('button', { name: 'Terminal Tests' }).click();
+    await page.getByRole('tab', { name: 'Terminal Tests' }).click();
 
     await expect(page.getByText(/OFFLINE TEST RUN|Case 1: Passed/i)).toBeVisible();
   });

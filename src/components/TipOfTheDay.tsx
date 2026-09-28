@@ -128,6 +128,7 @@ export default function TipOfTheDay() {
     return (
       <div className="fixed bottom-4 left-4 z-40">
         <button
+          type="button"
           id="recall-tip-btn"
           onClick={() => {
             setIsVisible(true);
@@ -136,8 +137,9 @@ export default function TipOfTheDay() {
           }}
           className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-zinc-950 text-white font-mono text-[10px] font-bold border border-zinc-800 shadow-lg hover:bg-zinc-900 transition-all active:scale-95 cursor-pointer hover:border-emerald-500/50"
           title="Recall Interview Tip of the Day"
+          aria-label="Show tip of the day"
         >
-          <Lightbulb className="w-3.5 h-3.5 text-amber-400 fill-amber-400/20 animate-pulse" />
+          <Lightbulb className="w-3.5 h-3.5 text-amber-400 fill-amber-400/20 motion-safe:animate-pulse" aria-hidden="true" />
           <span>DAILY TIP 💡</span>
         </button>
       </div>

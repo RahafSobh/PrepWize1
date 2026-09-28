@@ -72,7 +72,7 @@ Public runtime config for the SPA (no secrets). Used for staging banner and clie
 
 ### POST `/api/auth/demo`
 
-Development/CI only (`demoAuthEnabled: true` in `/api/config`). Issues a real httpOnly session cookie without Google.
+Email/demo sign-in when `demoAuthEnabled` is true in `/api/config`. Issues a real httpOnly session cookie without Google.
 
 **Request body:**
 ```json
@@ -81,7 +81,15 @@ Development/CI only (`demoAuthEnabled: true` in `/api/config`). Issues a real ht
 
 **Response:** `UserProfile` JSON + `Set-Cookie: prepwize_session=...`
 
-**Disabled in production** (`403`).
+**Note:** When Google Sign-In is configured in production, prefer Google; demo auth remains available for local/demo flows when enabled by server config.
+
+---
+
+### POST `/api/agent/chat`
+
+**Requires authentication** (session cookie). Prep Coach agent — see [`agent-flow.md`](agent-flow.md) for full request/response shapes, sanitization, and fallbacks.
+
+**Summary:** accepts `{ message, messages[], context }`, returns `{ reply, suggestedAction? }` with Gemini (`gemini-3.5-flash`) or `buildFallbackAgentResponse()`.
 
 ---
 
@@ -339,8 +347,8 @@ app.post("/api/interview/start", async (req, res) => {
 
 ## Security Notes
 
-- **Authentication required** on `/api/interview/*` and `/api/code/run` (401 without session)
-- **Demo auth** (`/api/auth/demo`) — development/staging only; disabled in production
+- **Authentication required** on `/api/interview/*`, `/api/agent/chat`, and `/api/code/run` (401 without session)
+- **Demo auth** (`/api/auth/demo`) — available when `demoAuthEnabled` is true in `/api/config`
 - **Code execution** — disabled in production (`503`); dev/staging uses `Function`/`eval` — not a true sandbox
 - **Rate limiting** on API, AI, and auth routes
 - **Input limits** — history length, message/code size, JSON body 256kb

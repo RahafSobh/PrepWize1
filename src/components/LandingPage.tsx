@@ -75,13 +75,6 @@ export default function LandingPage({ onStartPracticing }: LandingPageProps) {
 
   return (
     <div id="landing-page" className="min-h-screen bg-zinc-50 text-zinc-900">
-      <a
-        href="#how-it-works"
-        className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:rounded-lg focus:bg-white focus:px-3 focus:py-2 focus:text-sm focus:shadow"
-      >
-        Skip to content
-      </a>
-
       <header className="sticky top-0 z-30 border-b border-zinc-200 bg-white/90 backdrop-blur-sm">
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3 md:px-6">
           <div className="flex items-center gap-2.5">
@@ -153,14 +146,14 @@ export default function LandingPage({ onStartPracticing }: LandingPageProps) {
         )}
       </header>
 
-      <main>
-        <section className="mx-auto grid max-w-6xl items-center gap-10 px-4 py-16 md:grid-cols-2 md:px-6 md:py-24">
+      <main id="main-content" tabIndex={-1}>
+        <section className="mx-auto grid max-w-6xl items-center gap-10 px-4 py-16 md:grid-cols-2 md:px-6 md:py-24" aria-labelledby="landing-hero-heading">
           <div className="motion-safe:animate-slide-up">
             <p className="mb-4 inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-medium text-emerald-800">
               <Sparkles className="h-3.5 w-3.5" aria-hidden="true" />
               AI interview practice
             </p>
-            <h1 className="font-display text-4xl font-semibold tracking-tight text-zinc-950 sm:text-5xl md:text-6xl">
+            <h1 id="landing-hero-heading" className="font-display text-4xl font-semibold tracking-tight text-zinc-950 sm:text-5xl md:text-6xl">
               Prepare Smarter. Interview Better.
             </h1>
             <p className="mt-5 max-w-xl text-base leading-relaxed text-zinc-600 sm:text-lg">

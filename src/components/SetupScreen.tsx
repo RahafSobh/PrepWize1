@@ -57,10 +57,12 @@ export default function SetupScreen({ onBack, onLaunch, userPlan, initialPrefere
       {/* Header and Back Button */}
       <div className="flex items-center gap-3 mb-6">
         <button
+          type="button"
           onClick={onBack}
+          aria-label="Back to dashboard"
           className="p-2 rounded-xl border border-zinc-200 hover:bg-zinc-100 transition text-zinc-600 cursor-pointer"
         >
-          <ArrowLeft className="w-5 h-5" />
+          <ArrowLeft className="w-5 h-5" aria-hidden="true" />
         </button>
         <div>
           <h2 className="text-xl font-bold tracking-tight text-zinc-900">Configure Simulation Workspace</h2>
@@ -76,11 +78,12 @@ export default function SetupScreen({ onBack, onLaunch, userPlan, initialPrefere
             
             {/* 1. Track Type Choice */}
             <div className="space-y-3">
-              <label className="text-xs font-bold uppercase tracking-wider text-zinc-500 font-mono">1. Practice Track</label>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <p className="text-xs font-bold uppercase tracking-wider text-zinc-500 font-mono" id="setup-track-label">1. Practice Track</p>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3" role="group" aria-labelledby="setup-track-label">
                 
                 <button
                   type="button"
+                  aria-pressed={type === 'Algo'}
                   onClick={() => setType('Algo')}
                   className={`p-4 rounded-2xl border text-left transition cursor-pointer flex flex-col justify-between h-28 ${
                     type === 'Algo' 
@@ -88,7 +91,7 @@ export default function SetupScreen({ onBack, onLaunch, userPlan, initialPrefere
                       : 'border-zinc-200 bg-white hover:bg-zinc-50 text-zinc-700'
                   }`}
                 >
-                  <Laptop className="w-5 h-5 shrink-0" />
+                  <Laptop className="w-5 h-5 shrink-0" aria-hidden="true" />
                   <div>
                     <h4 className="text-sm font-semibold">Algorithm</h4>
                     <p className="text-[10px] opacity-80 mt-0.5">Coding sandbox with unit tests</p>
@@ -97,6 +100,7 @@ export default function SetupScreen({ onBack, onLaunch, userPlan, initialPrefere
 
                 <button
                   type="button"
+                  aria-pressed={type === 'Behavioral'}
                   onClick={() => setType('Behavioral')}
                   className={`p-4 rounded-2xl border text-left transition cursor-pointer flex flex-col justify-between h-28 ${
                     type === 'Behavioral' 
@@ -104,7 +108,7 @@ export default function SetupScreen({ onBack, onLaunch, userPlan, initialPrefere
                       : 'border-zinc-200 bg-white hover:bg-zinc-50 text-zinc-700'
                   }`}
                 >
-                  <MessageSquare className="w-5 h-5 shrink-0" />
+                  <MessageSquare className="w-5 h-5 shrink-0" aria-hidden="true" />
                   <div>
                     <h4 className="text-sm font-semibold">Behavioral</h4>
                     <p className="text-[10px] opacity-80 mt-0.5">STAR-method evaluation</p>
@@ -113,6 +117,7 @@ export default function SetupScreen({ onBack, onLaunch, userPlan, initialPrefere
 
                 <button
                   type="button"
+                  aria-pressed={type === 'System Design'}
                   onClick={() => setType('System Design')}
                   className={`p-4 rounded-2xl border text-left transition cursor-pointer flex flex-col justify-between h-28 ${
                     type === 'System Design' 
@@ -120,7 +125,7 @@ export default function SetupScreen({ onBack, onLaunch, userPlan, initialPrefere
                       : 'border-zinc-200 bg-white hover:bg-zinc-50 text-zinc-700'
                   }`}
                 >
-                  <Settings className="w-5 h-5 shrink-0" />
+                  <Settings className="w-5 h-5 shrink-0" aria-hidden="true" />
                   <div>
                     <h4 className="text-sm font-semibold">System Design</h4>
                     <p className="text-[10px] opacity-80 mt-0.5">High-scale box architectures</p>
@@ -136,8 +141,9 @@ export default function SetupScreen({ onBack, onLaunch, userPlan, initialPrefere
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               
               <div className="space-y-1.5 col-span-1">
-                <label className="text-xs font-bold text-zinc-700 font-mono">Job Role Profile</label>
+                <label htmlFor="setup-role-select" className="text-xs font-bold text-zinc-700 font-mono">Job Role Profile</label>
                 <select
+                  id="setup-role-select"
                   value={role}
                   onChange={(e) => setRole(e.target.value as JobRole)}
                   className="w-full text-sm bg-white border border-zinc-200 rounded-xl px-3.5 py-2.5 focus:border-neutral-900 focus:outline-hidden"
@@ -152,8 +158,9 @@ export default function SetupScreen({ onBack, onLaunch, userPlan, initialPrefere
               </div>
 
               <div className="space-y-1.5 col-span-1">
-                <label className="text-xs font-bold text-zinc-700 font-mono">Seniority Expectation</label>
+                <label htmlFor="setup-difficulty-select" className="text-xs font-bold text-zinc-700 font-mono">Seniority Expectation</label>
                 <select
+                  id="setup-difficulty-select"
                   value={difficulty}
                   onChange={(e) => setDifficulty(e.target.value as DifficultyLevel)}
                   className="w-full text-sm bg-white border border-zinc-200 rounded-xl px-3.5 py-2.5 focus:border-neutral-900 focus:outline-hidden"
@@ -170,12 +177,13 @@ export default function SetupScreen({ onBack, onLaunch, userPlan, initialPrefere
             {/* 3. Language Selection (Conditional) */}
             {type === 'Algo' && (
               <div className="space-y-1.5">
-                <label className="text-xs font-bold text-zinc-700 font-mono">Programming Environment</label>
-                <div className="flex flex-wrap gap-2">
+                <p className="text-xs font-bold text-zinc-700 font-mono" id="setup-language-label">Programming Environment</p>
+                <div className="flex flex-wrap gap-2" role="group" aria-labelledby="setup-language-label">
                   {['Javascript', 'Typescript', 'Python', 'Java', 'C++'].map((lang) => (
                     <button
                       key={lang}
                       type="button"
+                      aria-pressed={language === lang}
                       onClick={() => setLanguage(lang)}
                       className={`px-4 py-2 text-xs font-semibold rounded-xl border transition cursor-pointer ${
                         language === lang 
@@ -192,8 +200,8 @@ export default function SetupScreen({ onBack, onLaunch, userPlan, initialPrefere
 
             {/* 4. Interviewer Style */}
             <div className="space-y-1.5">
-              <label className="text-xs font-bold text-zinc-700 font-mono">Interviewer Behavioral Style</label>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+              <p className="text-xs font-bold text-zinc-700 font-mono" id="setup-style-label">Interviewer Behavioral Style</p>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2" role="group" aria-labelledby="setup-style-label">
                 {[
                   { id: 'Friendly', desc: 'Slight hints & encouragement' },
                   { id: 'Neutral', desc: 'Standard professional SWE standard' },
@@ -203,6 +211,7 @@ export default function SetupScreen({ onBack, onLaunch, userPlan, initialPrefere
                   <button
                     key={item.id}
                     type="button"
+                    aria-pressed={style === item.id}
                     onClick={() => setStyle(item.id as InterviewerStyle)}
                     className={`p-3 text-left border rounded-xl transition cursor-pointer flex flex-col justify-between ${
                       style === item.id 
@@ -220,11 +229,12 @@ export default function SetupScreen({ onBack, onLaunch, userPlan, initialPrefere
             {/* 5. Custom Topic Alignment */}
             <div className="space-y-1.5">
               <div className="flex justify-between items-center">
-                <label className="text-xs font-bold text-zinc-700 font-mono">Focused Topic Study (Optional)</label>
+                <label htmlFor="setup-topic-input" className="text-xs font-bold text-zinc-700 font-mono">Focused Topic Study (Optional)</label>
                 <span className="text-[10px] text-zinc-400">Specifies question focus</span>
               </div>
               
               <input
+                id="setup-topic-input"
                 type="text"
                 value={topic}
                 onChange={(e) => setTopic(e.target.value)}

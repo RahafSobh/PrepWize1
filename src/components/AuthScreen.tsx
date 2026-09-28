@@ -137,28 +137,23 @@ export default function AuthScreen({ onAuthSuccess, mockProfile, googleClientId 
                 Unlock matching FAANG assessments through creative AI simulation.
               </h2>
               <p className="text-zinc-400 text-xs leading-relaxed">
-                Experience dynamic whiteboard system designs, algorithmic debugger code sandboxes, and behavioral STAR interviews with automatic SLA-backed report analytics.
+                Experience Algo coding sandboxes, system design drafts, and behavioral STAR interviews with structured feedback reports.
               </p>
             </div>
           </div>
 
-          {/* Testimonial widget inside Banner */}
+          {/* Product summary — no fabricated testimonials */}
           <div className="space-y-4 pt-12 relative z-10 border-t border-zinc-850">
-            <div className="flex items-center gap-1">
-              {[1, 2, 3, 4, 5].map((s) => (
-                <span key={s} className="text-amber-400 text-xs">★</span>
-              ))}
-            </div>
-            <p className="text-xs text-zinc-300 italic">
-              "The dynamic whiteboard simulator completely removed my interview stress. I successfully cleared my systems assessment at Google!"
+            <p className="text-xs text-zinc-300 leading-relaxed">
+              Practice Algo, Behavioral, and System Design mock interviews, then review structured feedback for your next attempt.
             </p>
             <div className="flex items-center gap-2.5">
-              <div className="w-6 h-6 rounded-full bg-emerald-500 flex items-center justify-center text-[11px] font-semibold">
-                👩‍💻
+              <div className="w-6 h-6 rounded-full bg-emerald-500 flex items-center justify-center text-[11px] font-semibold" aria-hidden="true">
+                AI
               </div>
               <div>
-                <p className="text-[11px] font-bold">Rahaf Sobh</p>
-                <p className="text-[9px] text-zinc-500">Associate Engineering Lead</p>
+                <p className="text-[11px] font-bold">PrepWise practice loop</p>
+                <p className="text-[9px] text-zinc-500">Setup → Simulator → Feedback</p>
               </div>
             </div>
           </div>
@@ -170,9 +165,12 @@ export default function AuthScreen({ onAuthSuccess, mockProfile, googleClientId 
           {/* Tabs */}
           <div>
             <div className="flex items-center justify-between border-b border-zinc-100 pb-4 mb-6">
-              <div className="flex gap-4">
+              <div className="flex gap-4" role="tablist" aria-label="Authentication mode">
                 <button
                   id="auth-signup-tab"
+                  type="button"
+                  role="tab"
+                  aria-selected={tab === 'signup'}
                   onClick={() => { setTab('signup'); setErrorMessage(''); }}
                   className={`text-sm font-bold pb-2 relative transition cursor-pointer ${tab === 'signup' ? 'text-zinc-950 font-extrabold border-b-2 border-emerald-500' : 'text-zinc-400 hover:text-zinc-600'}`}
                 >
@@ -180,6 +178,9 @@ export default function AuthScreen({ onAuthSuccess, mockProfile, googleClientId 
                 </button>
                 <button
                   id="auth-login-tab"
+                  type="button"
+                  role="tab"
+                  aria-selected={tab === 'login'}
                   onClick={() => { setTab('login'); setErrorMessage(''); }}
                   className={`text-sm font-bold pb-2 relative transition cursor-pointer ${tab === 'login' ? 'text-zinc-950 font-extrabold border-b-2 border-emerald-500' : 'text-zinc-400 hover:text-zinc-600'}`}
                 >
@@ -206,14 +207,14 @@ export default function AuthScreen({ onAuthSuccess, mockProfile, googleClientId 
 
             {/* Errors / Success feedback boxes */}
             {errorMessage && (
-              <div className="p-3 bg-red-50 border border-red-200 text-red-700 text-xs rounded-xl mb-4 font-medium flex items-center gap-2">
-                <span>⚠️</span> {errorMessage}
+              <div className="p-3 bg-red-50 border border-red-200 text-red-700 text-xs rounded-xl mb-4 font-medium flex items-center gap-2" role="alert">
+                <span aria-hidden="true">⚠️</span> {errorMessage}
               </div>
             )}
             
             {successMessage && (
-              <div className="p-3 bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs rounded-xl mb-4 font-bold flex items-center gap-3">
-                <span className="animate-bounce">🎉</span> {successMessage}
+              <div className="p-3 bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs rounded-xl mb-4 font-bold flex items-center gap-3" role="status">
+                <span className="motion-safe:animate-bounce" aria-hidden="true">🎉</span> {successMessage}
               </div>
             )}
 
@@ -245,12 +246,14 @@ export default function AuthScreen({ onAuthSuccess, mockProfile, googleClientId 
             <form onSubmit={handleSubmit} className="space-y-4">
               {tab === 'signup' && (
                 <div>
-                  <label className="block text-[11px] font-bold text-zinc-700 mb-1.5 uppercase font-mono">My Display Name</label>
+                  <label htmlFor="auth-name-input" className="block text-[11px] font-bold text-zinc-700 mb-1.5 uppercase font-mono">My Display Name</label>
                   <div className="relative">
-                    <User className="absolute left-3 top-2.5 w-4 h-4 text-zinc-400" />
+                    <User className="absolute left-3 top-2.5 w-4 h-4 text-zinc-400" aria-hidden="true" />
                     <input
                       type="text"
                       id="auth-name-input"
+                      name="name"
+                      autoComplete="name"
                       value={name}
                       onChange={(e) => setName(e.target.value)}
                       placeholder="Maya Sobh"
@@ -261,12 +264,14 @@ export default function AuthScreen({ onAuthSuccess, mockProfile, googleClientId 
               )}
 
               <div>
-                <label className="block text-[11px] font-bold text-zinc-700 mb-1.5 uppercase font-mono">My Email Address</label>
+                <label htmlFor="auth-email-input" className="block text-[11px] font-bold text-zinc-700 mb-1.5 uppercase font-mono">My Email Address</label>
                 <div className="relative">
-                  <Mail className="absolute left-3 top-2.5 w-4 h-4 text-zinc-400" />
+                  <Mail className="absolute left-3 top-2.5 w-4 h-4 text-zinc-400" aria-hidden="true" />
                   <input
                     type="email"
                     id="auth-email-input"
+                    name="email"
+                    autoComplete="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="rahafsobh12@gmail.com"
@@ -276,12 +281,14 @@ export default function AuthScreen({ onAuthSuccess, mockProfile, googleClientId 
               </div>
 
               <div>
-                <label className="block text-[11px] font-bold text-zinc-700 mb-1.5 uppercase font-mono">Password (Min 6 chars)</label>
+                <label htmlFor="auth-password-input" className="block text-[11px] font-bold text-zinc-700 mb-1.5 uppercase font-mono">Password (Min 6 chars)</label>
                 <div className="relative">
-                  <Lock className="absolute left-3 top-2.5 w-4 h-4 text-zinc-400" />
+                  <Lock className="absolute left-3 top-2.5 w-4 h-4 text-zinc-400" aria-hidden="true" />
                   <input
                     type="password"
                     id="auth-password-input"
+                    name="password"
+                    autoComplete={tab === 'signup' ? 'new-password' : 'current-password'}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="••••••••••••"
@@ -292,26 +299,29 @@ export default function AuthScreen({ onAuthSuccess, mockProfile, googleClientId 
 
               {/* Dynamic Interactive Onboarding: Avatar / Role Persona Picker */}
               {tab === 'signup' && (
-                <div className="pt-2 space-y-2.5">
-                  <label className="block text-[11px] font-bold text-zinc-700 uppercase font-mono">
+                <fieldset className="pt-2 space-y-2.5 border-0 p-0 m-0 min-w-0">
+                  <legend className="block text-[11px] font-bold text-zinc-700 uppercase font-mono">
                     Select Your Candidate Archetype (Interactive)
-                  </label>
-                  <div className="grid grid-cols-5 gap-2">
+                  </legend>
+                  <div className="grid grid-cols-5 gap-2" role="radiogroup" aria-label="Candidate archetype">
                     {AVATAR_PRESETS.map((preset, idx) => (
                       <button
                         key={idx}
                         type="button"
+                        role="radio"
+                        aria-checked={avatarIndex === idx}
+                        aria-label={preset.label}
                         onClick={() => setAvatarIndex(idx)}
                         className={`p-3 rounded-2xl border text-center transition active:scale-95 flex flex-col items-center gap-1 cursor-pointer ${avatarIndex === idx ? 'border-emerald-500 bg-emerald-50/40 text-emerald-850 ring-2 ring-emerald-500/10' : 'border-zinc-200 bg-white text-zinc-650 hover:bg-zinc-50'}`}
                       >
-                        <span className="text-xl">{preset.emoji}</span>
-                        <span className="text-[8px] font-bold leading-tight uppercase font-mono block truncate max-w-full">{preset.label.split(' ')[0]}</span>
+                        <span className="text-xl" aria-hidden="true">{preset.emoji}</span>
+                        <span className="text-[8px] font-bold leading-tight uppercase font-mono block truncate max-w-full" aria-hidden="true">{preset.label.split(' ')[0]}</span>
                       </button>
                     ))}
                   </div>
                   
                   {/* Persona description display */}
-                  <div className="p-3 bg-zinc-50 border border-zinc-200 rounded-xl">
+                  <div className="p-3 bg-zinc-50 border border-zinc-200 rounded-xl" aria-live="polite">
                     <p className="text-[10px] text-zinc-400 font-mono font-bold uppercase tracking-wider">
                       Selected Archetype: {AVATAR_PRESETS[avatarIndex].label}
                     </p>
@@ -319,7 +329,7 @@ export default function AuthScreen({ onAuthSuccess, mockProfile, googleClientId 
                       &ldquo;{AVATAR_PRESETS[avatarIndex].desc}&rdquo;
                     </p>
                   </div>
-                </div>
+                </fieldset>
               )}
 
               {tab === 'signup' && (
@@ -342,7 +352,8 @@ export default function AuthScreen({ onAuthSuccess, mockProfile, googleClientId 
                 type="submit"
                 id="auth-submit-btn"
                 disabled={isLoading}
-                className="w-full bg-zinc-950 text-white font-bold py-3 px-4 rounded-xl group hover:bg-zinc-900 transition flex items-center justify-center gap-2 cursor-pointer active:scale-98"
+                aria-busy={isLoading}
+                className="w-full bg-zinc-950 text-white font-bold py-3 px-4 rounded-xl group hover:bg-zinc-900 transition flex items-center justify-center gap-2 cursor-pointer active:scale-98 disabled:opacity-60"
               >
                 {isLoading ? (
                   <span className="text-xs font-mono">Synchronous Validation handshakes...</span>
@@ -398,13 +409,11 @@ export default function AuthScreen({ onAuthSuccess, mockProfile, googleClientId 
 
           </div>
 
-          {/* SLA assurance */}
           <div className="mt-8 border-t border-zinc-150 pt-4 flex items-center justify-between text-[10px] text-zinc-400 font-mono">
             <span className="flex items-center gap-1">
-              <Shield className="w-3.5 h-3.5 text-emerald-500" />
-              SLA Security Assurance
+              <Shield className="w-3.5 h-3.5 text-emerald-500" aria-hidden="true" />
+              Session cookies stay on the server
             </span>
-            <span>Uptime: 99.5%</span>
           </div>
 
         </div>

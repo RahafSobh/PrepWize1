@@ -621,15 +621,19 @@ The candidate demonstrated solid problem solving.
                 onClick={toggleRecording}
                 className={`p-2.5 rounded-xl border transition cursor-pointer shrink-0 ${
                   isRecording 
-                    ? 'bg-red-50 border-red-200 text-red-500 animate-pulse' 
+                    ? 'bg-red-50 border-red-200 text-red-500 motion-safe:animate-pulse' 
                     : 'bg-zinc-50 border-zinc-200 text-zinc-600 hover:bg-zinc-100'
                 }`}
                 title="Practice explanation aloud"
+                aria-label={isRecording ? 'Stop voice recording' : 'Start voice recording'}
+                aria-pressed={isRecording}
               >
-                {isRecording ? <MicOff className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
+                {isRecording ? <MicOff className="w-5 h-5" aria-hidden="true" /> : <Mic className="w-5 h-5" aria-hidden="true" />}
               </button>
 
+              <label htmlFor="simulator-chat-input" className="sr-only">Interview chat message</label>
               <input
+                id="simulator-chat-input"
                 type="text"
                 value={inputText}
                 onChange={(e) => setInputText(e.target.value)}
@@ -639,9 +643,10 @@ The candidate demonstrated solid problem solving.
 
               <button
                 type="submit"
+                aria-label="Send chat message"
                 className="p-2.5 bg-neutral-900 hover:bg-zinc-800 text-white rounded-xl transition cursor-pointer"
               >
-                <Send className="w-4 h-4" />
+                <Send className="w-4 h-4" aria-hidden="true" />
               </button>
             </form>
 
@@ -673,8 +678,11 @@ The candidate demonstrated solid problem solving.
               
               {/* Tabs */}
               <div className="bg-zinc-900 border-b border-zinc-800/80 px-4 py-1.5 flex justify-between items-center shrink-0">
-                <div className="flex gap-2">
+                <div className="flex gap-2" role="tablist" aria-label="Code workspace panels">
                   <button
+                    type="button"
+                    role="tab"
+                    aria-selected={activeTab === 'editor'}
                     onClick={() => setActiveTab('editor')}
                     className={`py-1.5 px-3 text-xs font-semibold rounded-md transition cursor-pointer ${
                       activeTab === 'editor' ? 'bg-zinc-800 text-zinc-100 font-mono' : 'text-zinc-400 hover:text-zinc-250 font-mono'
@@ -683,12 +691,15 @@ The candidate demonstrated solid problem solving.
                     solution.{preferences.language.toLowerCase() === 'python' ? 'py' : 'js'}
                   </button>
                   <button
+                    type="button"
+                    role="tab"
+                    aria-selected={activeTab === 'terminal'}
                     onClick={() => setActiveTab('terminal')}
                     className={`py-1.5 px-3 text-xs font-semibold rounded-md transition cursor-pointer flex items-center gap-1 ${
                       activeTab === 'terminal' ? 'bg-zinc-800 text-zinc-100 font-mono' : 'text-zinc-400 hover:text-zinc-250 font-mono'
                     }`}
                   >
-                    <Terminal className="w-3.5 h-3.5" />
+                    <Terminal className="w-3.5 h-3.5" aria-hidden="true" />
                     <span>Terminal Tests</span>
                   </button>
                 </div>
@@ -723,11 +734,14 @@ The candidate demonstrated solid problem solving.
                         <div key={i}>{i + 1}</div>
                       ))}
                     </div>
+                    <label htmlFor="simulator-code-editor" className="sr-only">Solution code editor</label>
                     <textarea
+                      id="simulator-code-editor"
                       value={editorCode}
                       onChange={(e) => setEditorCode(e.target.value)}
                       className="flex-1 bg-transparent text-zinc-200 p-3 pt-3 font-mono text-xs focus:outline-hidden resize-none leading-relaxed"
                       placeholder="// Write code here..."
+                      spellCheck={false}
                     />
                   </div>
 
@@ -805,8 +819,9 @@ The candidate demonstrated solid problem solving.
 
               {/* Text draft architecture workspace */}
               <div className="flex-1 flex flex-col min-h-[160px]">
-                <label className="text-[10px] text-zinc-500 font-bold tracking-wider mb-1 uppercase font-mono">Architecture Text Draft Description</label>
+                <label htmlFor="architecture-draft" className="text-[10px] text-zinc-500 font-bold tracking-wider mb-1 uppercase font-mono">Architecture Text Draft Description</label>
                 <textarea
+                  id="architecture-draft"
                   value={designDraft}
                   onChange={(e) => setDesignDraft(e.target.value)}
                   className="flex-1 w-full bg-zinc-900 border border-zinc-800 rounded-2xl p-4 font-mono text-xs text-zinc-200 focus:outline-hidden resize-none leading-relaxed"

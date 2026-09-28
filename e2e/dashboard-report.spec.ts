@@ -41,7 +41,7 @@ test.describe('Dashboard report flow', () => {
     await page.goto('/');
     await page.locator('#dashboard-view').waitFor();
 
-    await page.getByRole('button', { name: /Simulation Logs/i }).click();
+    await page.getByRole('tab', { name: /Simulation Logs/i }).click();
     await page.locator('#view-report-e2e-historical-1').click();
 
     await expect(page.locator('#feedback-report-screen')).toBeVisible();

@@ -46,7 +46,9 @@ const ai = new GoogleGenAI({
 
 ---
 
-## Three AI Endpoints
+## Three AI Endpoints (+ Prep Coach)
+
+Also see [`agent-flow.md`](agent-flow.md) for `POST /api/agent/chat` (Prep Coach). Same model, structured JSON, server-side only, with `buildFallbackAgentResponse()`.
 
 ### 1. Interview Start — Structured JSON
 

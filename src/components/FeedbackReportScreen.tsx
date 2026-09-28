@@ -81,10 +81,11 @@ export default function FeedbackReportScreen({ session, onClose, onRetake }: Fee
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-zinc-200">
         <div>
           <button
+            type="button"
             onClick={onClose}
             className="inline-flex items-center gap-1 text-xs font-semibold text-zinc-500 hover:text-zinc-950 transition cursor-pointer mb-2"
           >
-            <ArrowLeft className="w-3.5 h-3.5" />
+            <ArrowLeft className="w-3.5 h-3.5" aria-hidden="true" />
             <span>Back to Dashboard</span>
           </button>
           <h2 className="text-xl font-bold tracking-tight text-zinc-900">AI Post-Interview Assessment</h2>

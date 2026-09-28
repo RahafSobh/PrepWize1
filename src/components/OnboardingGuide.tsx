@@ -3,8 +3,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState } from 'react';
-import { Sparkles, ArrowRight, ArrowLeft, CheckCircle, HelpCircle, Laptop, Shield, Award, Terminal, Play, Star, BookOpen, Layers } from 'lucide-react';
+import React, { useEffect, useId, useRef, useState } from 'react';
+import { Sparkles, ArrowRight, ArrowLeft, CheckCircle, Laptop, Award, Terminal, BookOpen } from 'lucide-react';
 
 interface OnboardingGuideProps {
   isOpen: boolean;
@@ -48,6 +48,49 @@ const ONBOARDING_STEPS = [
 
 export default function OnboardingGuide({ isOpen, onClose }: OnboardingGuideProps) {
   const [currentStep, setCurrentStep] = useState(0);
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const previouslyFocused = useRef<HTMLElement | null>(null);
+  const titleId = useId();
+  const descId = useId();
+
+  useEffect(() => {
+    if (!isOpen) return;
+
+    previouslyFocused.current = document.activeElement as HTMLElement | null;
+    const dialog = dialogRef.current;
+    const focusable = dialog?.querySelectorAll<HTMLElement>(
+      'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+    );
+    focusable?.[0]?.focus();
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        onClose();
+        return;
+      }
+      if (event.key !== 'Tab' || !dialog || !focusable || focusable.length === 0) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+
+    document.addEventListener('keydown', onKeyDown);
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+
+    return () => {
+      document.removeEventListener('keydown', onKeyDown);
+      document.body.style.overflow = previousOverflow;
+      previouslyFocused.current?.focus();
+    };
+  }, [isOpen, onClose]);
 
   if (!isOpen) return null;
 
@@ -75,26 +118,41 @@ export default function OnboardingGuide({ isOpen, onClose }: OnboardingGuideProp
   };
 
   return (
-    <div id="onboarding-guide-overlay" className="fixed inset-0 bg-zinc-950/60 backdrop-blur-xs flex items-center justify-center z-50 p-4 transition-all animate-fade-in">
+    <div
+      id="onboarding-guide-overlay"
+      className="fixed inset-0 bg-zinc-950/60 backdrop-blur-xs flex items-center justify-center z-50 p-4 transition-all motion-safe:animate-fade-in"
+      role="presentation"
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget) onClose();
+      }}
+    >
       
-      <div className="w-full max-w-2xl bg-white border border-zinc-200 rounded-3xl shadow-2xl p-6 md:p-8 relative overflow-hidden flex flex-col justify-between max-h-[92vh]">
+      <div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        aria-describedby={descId}
+        className="w-full max-w-2xl bg-white border border-zinc-200 rounded-3xl shadow-2xl p-6 md:p-8 relative overflow-hidden flex flex-col justify-between max-h-[92vh]"
+      >
         
         {/* Abstract Background Accents */}
-        <div className="absolute right-0 top-0 -mr-16 -mt-16 w-48 h-48 bg-emerald-500/5 rounded-full blur-3xl pointer-events-none" />
-        <div className="absolute left-0 bottom-0 -ml-16 -mb-16 w-48 h-48 bg-amber-500/5 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute right-0 top-0 -mr-16 -mt-16 w-48 h-48 bg-emerald-500/5 rounded-full blur-3xl pointer-events-none" aria-hidden="true" />
+        <div className="absolute left-0 bottom-0 -ml-16 -mb-16 w-48 h-48 bg-amber-500/5 rounded-full blur-3xl pointer-events-none" aria-hidden="true" />
 
         {/* Modal Header */}
         <div className="flex items-center justify-between border-b border-zinc-150 pb-4 mb-6 relative z-10">
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-xl bg-zinc-950 flex items-center justify-center border border-zinc-850">
+            <div className="w-8 h-8 rounded-xl bg-zinc-950 flex items-center justify-center border border-zinc-850" aria-hidden="true">
               <BookOpen className="w-4 h-4 text-emerald-400" />
             </div>
             <div>
-              <h3 className="text-sm font-extrabold text-zinc-950 tracking-tight font-display">PrepWise AI Onboarding Playbook</h3>
+              <h2 id={titleId} className="text-sm font-extrabold text-zinc-950 tracking-tight font-display">PrepWise AI Onboarding Playbook</h2>
               <p className="text-[10px] text-zinc-400 font-mono">Frictionless Interactive Sandbox Guide</p>
             </div>
           </div>
           <button 
+            type="button"
             id="onboarding-skip-top-btn"
             onClick={handleSkip}
             className="text-[10px] font-bold font-mono text-zinc-400 hover:text-zinc-800 transition px-2.5 py-1 rounded bg-zinc-50 border border-zinc-200 cursor-pointer"
@@ -104,14 +162,15 @@ export default function OnboardingGuide({ isOpen, onClose }: OnboardingGuideProp
         </div>
 
         {/* Body Content */}
-        <div className="space-y-6 flex-1 relative z-10">
+        <div className="space-y-6 flex-1 relative z-10" id={descId}>
           
           {/* Step Progress Tracker Bars */}
-          <div className="flex gap-2">
+          <div className="flex gap-2" role="group" aria-label={`Step ${currentStep + 1} of ${ONBOARDING_STEPS.length}`}>
             {ONBOARDING_STEPS.map((_, index) => (
               <div 
                 key={index} 
                 className="flex-1 h-1.5 rounded-full transition-all duration-300 relative"
+                aria-hidden="true"
               >
                 <div 
                   className={`absolute inset-0 rounded-full transition-all duration-300 ${
@@ -126,7 +185,7 @@ export default function OnboardingGuide({ isOpen, onClose }: OnboardingGuideProp
           <div className="p-6 rounded-2xl bg-zinc-50 border border-zinc-200 grid grid-cols-1 md:grid-cols-12 gap-6 items-center">
             
             <div className="md:col-span-4 flex justify-center">
-              <div className="w-24 h-24 rounded-3xl bg-zinc-950 border border-zinc-800 flex items-center justify-center text-white shadow-lg animate-pulse relative">
+              <div className="w-24 h-24 rounded-3xl bg-zinc-950 border border-zinc-800 flex items-center justify-center text-white shadow-lg motion-safe:animate-pulse relative" aria-hidden="true">
                 <StepIcon className="w-10 h-10 text-emerald-400" />
                 <span className="absolute -bottom-2 -right-2 bg-amber-400 text-zinc-950 text-[10px] font-mono font-bold px-2 py-0.5 rounded-full shadow-xs">
                   Step {currentStep + 1}
@@ -141,9 +200,9 @@ export default function OnboardingGuide({ isOpen, onClose }: OnboardingGuideProp
               <p className="text-[11px] font-semibold font-mono text-zinc-400 tracking-wider">
                 {stepInfo.subtitle}
               </p>
-              <h4 className="text-base font-extrabold text-zinc-900 tracking-tight">
+              <h3 className="text-base font-extrabold text-zinc-900 tracking-tight">
                 {stepInfo.title}
-              </h4>
+              </h3>
               <p className="text-xs text-zinc-650 leading-relaxed font-sans">
                 {stepInfo.description}
               </p>
@@ -153,7 +212,7 @@ export default function OnboardingGuide({ isOpen, onClose }: OnboardingGuideProp
 
           {/* Quick Highlight Info banner */}
           <div className="p-3.5 bg-emerald-50/50 border border-emerald-100/80 rounded-xl flex items-start gap-2.5">
-            <span className="text-base">💡</span>
+            <span className="text-base" aria-hidden="true">💡</span>
             <div className="text-xs text-zinc-700 font-sans">
               <span className="font-bold text-emerald-800">Pro tip: </span>
               {stepInfo.highlight}
@@ -166,33 +225,35 @@ export default function OnboardingGuide({ isOpen, onClose }: OnboardingGuideProp
         <div className="flex items-center justify-between border-t border-zinc-150 pt-5 mt-6 relative z-10">
           
           <button
+            type="button"
             id="onboarding-back-btn"
             onClick={handleBack}
             disabled={currentStep === 0}
             className={`inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold border border-zinc-200 transition select-none ${
-              currentStep === 0 ? 'opacity-30 pointer-events-none text-zinc-300' : 'text-zinc-600 hover:bg-zinc-50 bg-white cursor-pointer active:scale-95'
+              currentStep === 0 ? 'opacity-30 text-zinc-300 cursor-not-allowed' : 'text-zinc-600 hover:bg-zinc-50 bg-white cursor-pointer active:scale-95'
             }`}
           >
-            <ArrowLeft className="w-3.5 h-3.5" />
+            <ArrowLeft className="w-3.5 h-3.5" aria-hidden="true" />
             Previous
           </button>
 
-          <div className="text-xs font-mono font-bold text-zinc-400">
+          <div className="text-xs font-mono font-bold text-zinc-400" aria-live="polite">
             {currentStep + 1} / {ONBOARDING_STEPS.length}
           </div>
 
           <button
+            type="button"
             id="onboarding-next-btn"
             onClick={handleNext}
             className="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-xl text-xs font-bold bg-zinc-950 hover:bg-zinc-900 text-white transition cursor-pointer active:scale-95 shadow-sm"
           >
             {currentStep === ONBOARDING_STEPS.length - 1 ? (
               <>
-                Let's Code! <CheckCircle className="w-3.5 h-3.5 text-emerald-400" />
+                Let's Code! <CheckCircle className="w-3.5 h-3.5 text-emerald-400" aria-hidden="true" />
               </>
             ) : (
               <>
-                Next Step <ArrowRight className="w-3.5 h-3.5" />
+                Next Step <ArrowRight className="w-3.5 h-3.5" aria-hidden="true" />
               </>
             )}
           </button>

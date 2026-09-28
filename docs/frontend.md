@@ -28,12 +28,14 @@ index.html → src/main.tsx → App.tsx
 
 ## View State Machine
 
-`App.tsx` מנהל navigation דרך `currentView`:
+`App.tsx` מנהל navigation דרך `currentView` (אחרי authentication) ו-`publicView` לפניו:
 
 | View | Component | תיאור |
 |------|-----------|-------|
-| *(gate)* | `AuthScreen` | מוצג כש-`!isAuthenticated` |
+| `publicView: landing` | `LandingPage` | דף כניסה ציבורי לפני auth |
+| `publicView: auth` | `AuthScreen` | מוצג כש-`!isAuthenticated` אחרי CTA |
 | `dashboard` | `Dashboard` | analytics, history, achievements |
+| `coach` | `InterviewCoachAgent` | Prep Coach — תכנון תרגול + המלצת setup |
 | `setup` | `SetupScreen` | בחירת פרמטרי סימולציה |
 | `simulator` | `SimulatorScreen` | ראיון חי |
 | `feedback` | `FeedbackReportScreen` | דוח לאחר סימולציה |
@@ -42,8 +44,17 @@ index.html → src/main.tsx → App.tsx
 ### Navigation Triggers
 
 ```typescript
+// Landing → Auth
+onStartPracticing={() => setPublicView('auth')}
+
 // Dashboard → Setup
 onStartNew={() => setCurrentView('setup')}
+
+// Dashboard → Prep Coach
+onOpenCoach={() => setCurrentView('coach')}
+
+// Coach → Setup (prefilled recommendation)
+onApplyLaunchSetup={handleApplyCoachRecommendation}
 
 // Setup → Simulator (via handleLaunchSession)
 onLaunch={handleLaunchSession}
@@ -66,9 +77,11 @@ onOpenPricing / plan gating redirect
 
 | File | Props (key) | Responsibility |
 |------|-------------|----------------|
-| `AuthScreen.tsx` | `onAuthSuccess`, `mockProfile` | Mock login/signup; avatar presets |
-| `Dashboard.tsx` | `pastSessions`, `profile`, callbacks | Score chart, session list, role focus |
-| `SetupScreen.tsx` | `onLaunch`, `onBack`, `userPlan` | Interview config form |
+| `LandingPage.tsx` | `onStartPracticing` | Public marketing entry; CTAs to auth / in-page sections |
+| `AuthScreen.tsx` | `onAuthSuccess`, `mockProfile`, `googleClientId` | Login/signup + Google Sign-In |
+| `Dashboard.tsx` | `pastSessions`, `profile`, callbacks | Score chart, session list, Prep Coach entry |
+| `InterviewCoachAgent.tsx` | `profile`, `sessions`, `onApplyLaunchSetup` | Prep Coach chat → optional setup recommendation |
+| `SetupScreen.tsx` | `onLaunch`, `onBack`, `userPlan`, `initialPreferences?` | Interview config form |
 | `SimulatorScreen.tsx` | `preferences`, `onExit`, `onFeedbackGenerated` | Chat, editor, code run, feedback |
 | `FeedbackReportScreen.tsx` | `session`, `onClose`, `onRetake` | Score display, markdown summary |
 | `PricingScreen.tsx` | `currentProfile`, `onUpdatePlan` | Plan tier UI |

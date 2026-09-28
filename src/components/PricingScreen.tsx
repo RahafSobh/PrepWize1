@@ -104,16 +104,29 @@ export default function PricingScreen({ currentProfile, onClose, onUpdatePlan }:
       
       {/* Checkout modal overlay sheet */}
       {checkoutPlan && (
-        <div id="payment-checkout-overlay" className="absolute inset-0 z-50 bg-black/55 backdrop-blur-md flex items-center justify-center p-4">
-          <div className="bg-white border border-zinc-200 rounded-3xl p-6 md:p-8 max-w-md w-full space-y-6 text-zinc-900 shadow-2xl">
+        <div
+          id="payment-checkout-overlay"
+          className="absolute inset-0 z-50 bg-black/55 backdrop-blur-md flex items-center justify-center p-4"
+          role="presentation"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget && !isProcessing) setCheckoutPlan(null);
+          }}
+        >
+          <div
+            className="bg-white border border-zinc-200 rounded-3xl p-6 md:p-8 max-w-md w-full space-y-6 text-zinc-900 shadow-2xl"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="checkout-dialog-title"
+          >
             <div className="flex justify-between items-start">
               <div className="space-y-1">
                 <span className="text-[10px] font-bold font-mono tracking-wider text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded">MOCK TRANSACTION SCREEN</span>
-                <h4 className="text-sm font-bold text-zinc-900 mt-2">Finish Upgrading to {checkoutPlan}</h4>
+                <h4 id="checkout-dialog-title" className="text-sm font-bold text-zinc-900 mt-2">Finish Upgrading to {checkoutPlan}</h4>
               </div>
               <button 
+                type="button"
                 onClick={() => setCheckoutPlan(null)} 
-                className="text-xs text-zinc-400 font-bold hover:text-zinc-800 transition cursor-pointer"
+                className="text-xs text-zinc-400 font-bold hover:text-zinc-800 transition cursor-pointer disabled:opacity-50"
                 disabled={isProcessing}
               >
                 Cancel
@@ -121,7 +134,7 @@ export default function PricingScreen({ currentProfile, onClose, onUpdatePlan }:
             </div>
 
             <div className="bg-zinc-50 border border-zinc-150 p-4 rounded-2xl flex items-center gap-3">
-              <Zap className="w-6 h-6 text-emerald-500 fill-emerald-500 shrink-0" />
+              <Zap className="w-6 h-6 text-emerald-500 fill-emerald-500 shrink-0" aria-hidden="true" />
               <div>
                 <p className="text-xs font-bold font-mono text-zinc-800">
                   Total price: {tiers.find(t => t.name === checkoutPlan)?.price} / month
@@ -133,32 +146,39 @@ export default function PricingScreen({ currentProfile, onClose, onUpdatePlan }:
             {/* Payment Fields mock inputs */}
             <div className="space-y-3 text-xs font-mono">
               <div className="space-y-1">
-                <span className="text-[10px] text-zinc-500 font-bold uppercase">Card details (Testing numbers valid)</span>
+                <label htmlFor="checkout-card-number" className="text-[10px] text-zinc-500 font-bold uppercase">Card details (Testing numbers valid)</label>
                 <div className="relative">
                   <input
+                    id="checkout-card-number"
                     type="text"
+                    inputMode="numeric"
+                    autoComplete="cc-number"
                     value={cardNumber}
                     onChange={(e) => setCardNumber(e.target.value)}
                     className="w-full text-xs font-mono bg-zinc-50 border border-zinc-200 rounded-xl px-3.5 py-2.5 focus:border-neutral-900 focus:outline-hidden"
                   />
-                  <CreditCard className="absolute right-3.5 top-3 w-4 h-4 text-zinc-400" />
+                  <CreditCard className="absolute right-3.5 top-3 w-4 h-4 text-zinc-400" aria-hidden="true" />
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1">
-                  <span className="text-[10px] text-zinc-500 font-bold uppercase">EXP DATE</span>
+                  <label htmlFor="checkout-expiry" className="text-[10px] text-zinc-500 font-bold uppercase">EXP DATE</label>
                   <input
+                    id="checkout-expiry"
                     type="text"
+                    autoComplete="cc-exp"
                     value={expiry}
                     onChange={(e) => setExpiry(e.target.value)}
                     className="w-full text-xs font-mono bg-zinc-50 border border-zinc-250 rounded-xl px-3.5 py-2.5 focus:border-neutral-900 focus:outline-hidden"
                   />
                 </div>
                 <div className="space-y-1">
-                  <span className="text-[10px] text-zinc-500 font-bold uppercase">CVC</span>
+                  <label htmlFor="checkout-cvc" className="text-[10px] text-zinc-500 font-bold uppercase">CVC</label>
                   <input
+                    id="checkout-cvc"
                     type="password"
+                    autoComplete="cc-csc"
                     value={cvc}
                     onChange={(e) => setCvc(e.target.value)}
                     className="w-full text-xs font-mono bg-zinc-50 border border-zinc-250 rounded-xl px-3.5 py-2.5 focus:border-neutral-900"
@@ -171,17 +191,18 @@ export default function PricingScreen({ currentProfile, onClose, onUpdatePlan }:
               <button
                 type="button"
                 onClick={handleCompleteMockPurchase}
-                className="w-full inline-flex items-center justify-center gap-2 px-6 py-3.5 bg-neutral-950 hover:bg-zinc-800 text-white text-xs font-semibold rounded-2xl shadow-xs transition cursor-pointer"
+                className="w-full inline-flex items-center justify-center gap-2 px-6 py-3.5 bg-neutral-950 hover:bg-zinc-800 text-white text-xs font-semibold rounded-2xl shadow-xs transition cursor-pointer disabled:opacity-60"
                 disabled={isProcessing}
+                aria-busy={isProcessing}
               >
                 {isProcessing ? (
                   <>
-                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <Loader2 className="w-4 h-4 motion-safe:animate-spin" aria-hidden="true" />
                     <span>Authorizing transaction pipeline...</span>
                   </>
                 ) : (
                   <>
-                    <Shield className="w-4 h-4 text-emerald-400" />
+                    <Shield className="w-4 h-4 text-emerald-400" aria-hidden="true" />
                     <span>Authorize Mock Purchase</span>
                   </>
                 )}
@@ -194,10 +215,12 @@ export default function PricingScreen({ currentProfile, onClose, onUpdatePlan }:
       {/* Header and Back Button */}
       <div className="flex items-center gap-3">
         <button
+          type="button"
           onClick={onClose}
+          aria-label="Back to dashboard"
           className="p-2 rounded-xl border border-zinc-200 hover:bg-zinc-100 transition text-zinc-650 cursor-pointer"
         >
-          <ArrowLeft className="w-5 h-5" />
+          <ArrowLeft className="w-5 h-5" aria-hidden="true" />
         </button>
         <div>
           <h2 className="text-xl font-bold tracking-tight text-zinc-900">Manage Membership License</h2>

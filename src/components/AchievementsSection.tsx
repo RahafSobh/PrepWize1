@@ -230,14 +230,28 @@ export default function AchievementsSection({ sessions }: AchievementsSectionPro
 
       {/* Selected Badge Interactive Dialog Modal */}
       {selectedBadge && (
-        <div className="fixed inset-0 bg-zinc-950/60 backdrop-blur-xs flex items-center justify-center z-50 p-4 transition-all">
-          <div className="w-full max-w-md bg-white border border-zinc-200 rounded-3xl p-6 shadow-2xl relative overflow-hidden space-y-6">
+        <div
+          className="fixed inset-0 bg-zinc-950/60 backdrop-blur-xs flex items-center justify-center z-50 p-4 transition-all"
+          role="presentation"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) {
+              setSelectedBadge(null);
+              setIsCelebrationOpen(false);
+            }
+          }}
+        >
+          <div
+            className="w-full max-w-md bg-white border border-zinc-200 rounded-3xl p-6 shadow-2xl relative overflow-hidden space-y-6"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="achievement-dialog-title"
+          >
             
             {/* Accent light source */}
             {selectedBadge.checkUnlocked(sessions) ? (
-              <div className="absolute right-0 top-0 -mr-16 -mt-16 w-32 h-32 bg-emerald-500/15 rounded-full blur-2xl pointer-events-none" />
+              <div className="absolute right-0 top-0 -mr-16 -mt-16 w-32 h-32 bg-emerald-500/15 rounded-full blur-2xl pointer-events-none" aria-hidden="true" />
             ) : (
-              <div className="absolute right-0 top-0 -mr-16 -mt-16 w-32 h-32 bg-zinc-500/10 rounded-full blur-2xl pointer-events-none" />
+              <div className="absolute right-0 top-0 -mr-16 -mt-16 w-32 h-32 bg-zinc-500/10 rounded-full blur-2xl pointer-events-none" aria-hidden="true" />
             )}
 
             {/* Modal Title Banner */}
@@ -246,22 +260,23 @@ export default function AchievementsSection({ sessions }: AchievementsSectionPro
                 <span className="text-[10px] font-mono bg-zinc-100 text-zinc-500 font-bold px-2 py-0.5 rounded-full uppercase">
                   {selectedBadge.checkUnlocked(sessions) ? '🏆 Achievement Completed' : '🔒 Locked Milestone'}
                 </span>
-                <h3 className="text-base font-extrabold text-zinc-950 mt-1 z-10 relative font-display">
+                <h3 id="achievement-dialog-title" className="text-base font-extrabold text-zinc-950 mt-1 z-10 relative font-display">
                   {selectedBadge.name}
                 </h3>
               </div>
               <button
                 type="button"
                 onClick={() => { setSelectedBadge(null); setIsCelebrationOpen(false); }}
+                aria-label="Close achievement details"
                 className="p-1 rounded-lg text-zinc-400 hover:text-zinc-800 hover:bg-zinc-55/10 transition cursor-pointer"
               >
-                ✕
+                <span aria-hidden="true">✕</span>
               </button>
             </div>
 
             {/* Big graphical icon representation */}
             <div className="flex flex-col items-center justify-center py-6 bg-zinc-50 rounded-2xl border border-zinc-150 relative">
-              <span className="text-4xl mb-2.5 select-none filter drop-shadow-sm animate-bounce">
+              <span className="text-4xl mb-2.5 select-none filter drop-shadow-sm motion-safe:animate-bounce" aria-hidden="true">
                 {selectedBadge.checkUnlocked(sessions) ? selectedBadge.unlockedEmoji : '🔒'}
               </span>
               <div className="text-center px-4 max-w-xs space-y-1">
